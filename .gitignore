@@ -27,3 +27,4 @@ Thumbs.db
 .env
 dashboard/tsconfig.tsbuildinfo
 reports/pipeline.log
+docs/build/node_modules/
