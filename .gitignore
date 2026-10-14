@@ -12,7 +12,7 @@ venv/
 data/raw/
 data/processed/
 data/synthetic/
-models/*.joblib
+models/
 reports/*.parquet
 
 # Dashboard
@@ -28,3 +28,10 @@ Thumbs.db
 dashboard/tsconfig.tsbuildinfo
 reports/pipeline.log
 docs/build/node_modules/
+
+# Internal working files (presentation tooling, recording script, team input)
+docs/VIDEO_SCRIPT.md
+docs/build/
+docs/team.json
+scripts/deck_data.py
+scripts/screenshots.py
