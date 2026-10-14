@@ -1,0 +1,183 @@
+"""Clinical copilot: a grounded narrative of the twin's state for the treating doctor.
+
+Two engines:
+* ``rule``  - deterministic, offline, always available (the default when no API
+              credentials are configured). Every sentence is traceable to a number.
+* ``llm``   - Claude (Anthropic API), constrained by a system prompt to use ONLY the
+              JSON context the twin computed; falls back to ``rule`` on any error or
+              refusal so the dashboard never breaks.
+
+Safety posture: decision support for clinicians, not autonomous care. The copilot
+never prescribes doses; medication remarks are framed as "consider / review".
+"""
+from __future__ import annotations
+
+import json
+import os
+
+MODEL = "claude-opus-5-5"
+
+SYSTEM_PROMPT = """You are MadhuTwin Copilot, a clinical decision-support assistant for doctors in India \
+who manage people with type 2 diabetes and prediabetes. You are given a JSON snapshot computed by a \
+patient's digital twin: health-record summary, live CGM and wearable state, 2-hour forecasts with 90% \
+prediction intervals, event risks, the data streams driving each alert, 7-day glucose metrics, the twin's \
+physiological phenotype, and simulated what-if outcomes.
+
+Rules:
+- Use only facts present in the JSON. Do not invent labs, history, symptoms or medications. If the JSON \
+cannot answer a question, say so plainly.
+- Audience: the treating clinician. Be concise and clinically precise; use mg/dL and %.
+- Never give dosing instructions. Medication points are phrased as items for the clinician to review \
+("consider reviewing sulfonylurea dose given recurrent lows"), consistent with standard guidance \
+(ADA Standards of Care, RSSDI).
+- State uncertainty: forecasts are probabilistic; quote the interval when you quote a forecast.
+- Note when a recommendation comes from the twin's simulation (a model estimate, not an observed outcome).
+- Data marked synthetic is fictional and is for demonstration only.
+Format: short markdown with headings "Snapshot", "Next 2 hours", "Why", "7-day pattern", \
+"Discussion points". For a direct question, answer it first in 2-5 sentences, then add only the relevant sections."""
+
+
+def _arrow(slope: float) -> str:
+    if slope is None:
+        return ""
+    if slope > 2:
+        return "rising fast"
+    if slope > 1:
+        return "rising"
+    if slope < -2:
+        return "falling fast"
+    if slope < -1:
+        return "falling"
+    return "steady"
+
+
+def rule_based(ctx: dict, question: str | None = None) -> str:
+    p = ctx["patient"]
+    now = ctx["now"]
+    fc = ctx.get("forecast", {})
+    risks = ctx.get("risks", {})
+    agp = ctx.get("agp_7d", {})
+    lines = []
+    if question:
+        lines.append(f"> **Question:** {question}\n")
+        lines.append(_answer(question, ctx) + "\n")
+    lines.append("### Snapshot")
+    rx = ", ".join(r["drug"] for r in p.get("regimen", [])) or "no glucose-lowering drugs"
+    duration = " for {:.0f} y".format(p["dm_years"]) if p.get("dm_years") else ""
+    lines.append(f"{p['name']}, {p['age']}{p['sex']}, {p['group_label']}{duration}; HbA1c {p['hba1c']} %; on {rx}.")
+    lines.append(f"Now ({now['time_label']}): **{now['glucose']:.0f} mg/dL**, {_arrow(now.get('slope'))} "
+                 f"({now.get('slope', 0):+.1f} mg/dL/min).")
+    lines.append("\n### Next 2 hours")
+    for h in ("30", "60", "120"):
+        if h in fc:
+            f = fc[h]
+            lines.append(f"- +{h} min: {f['pred']:.0f} mg/dL (90 % interval {f['lo']:.0f}-{f['hi']:.0f})")
+    lines.append(f"- Risk of exceeding 180 mg/dL within 2 h: **{risks.get('hyper', 0) * 100:.0f} %**; "
+                 f"hypoglycaemia (<70) within 1 h: **{risks.get('hypo', 0) * 100:.0f} %**.")
+    alerts = ctx.get("alerts", [])
+    if alerts:
+        lines.append("\n### Why")
+        a = alerts[0]
+        lines.append(f"**{a['title']}** - main drivers:")
+        for d in a.get("drivers", [])[:4]:
+            lines.append(f"- {d['text']} ({d['direction']})")
+        if a.get("streams"):
+            top = ", ".join(f"{s['label']} {s['share'] * 100:.0f} %" for s in a["streams"][:3])
+            lines.append(f"- Contribution by data stream: {top}")
+    if agp:
+        lines.append("\n### 7-day pattern")
+        lines.append(f"TIR {agp['tir']:.0f} % (target >70 %), TBR {agp['tbr']:.1f} % (target <4 %), "
+                     f"TAR {agp['tar']:.0f} %, GMI {agp['gmi']:.1f} %, CV {agp['cv']:.0f} % (target <=36 %).")
+    lines.append("\n### Discussion points")
+    pts = _discussion_points(ctx)
+    lines.extend(f"- {x}" for x in pts) if pts else lines.append("- Glycaemic pattern within targets; continue current plan.")
+    recs = ctx.get("recommendations", [])
+    if recs:
+        best = recs[0]
+        lines.append(f"- Twin simulation: *{best['label']}* would change the predicted peak by "
+                     f"{best['delta_peak']:+.0f} mg/dL and time above 180 by {best['delta_tar_min']:+.0f} min (model estimate).")
+    lines.append("\n<sub>Generated by the deterministic rule engine from twin outputs. "
+                 f"{'Synthetic patient - demonstration only.' if p.get('synthetic') else ''}</sub>")
+    return "\n".join(lines)
+
+
+def _discussion_points(ctx: dict) -> list[str]:
+    p = ctx["patient"]
+    agp = ctx.get("agp_7d", {})
+    classes = {r.get("class") for r in p.get("regimen", [])}
+    out = []
+    if agp.get("tbr", 0) >= 1 and classes & {"sulfonylurea", "basal_insulin"}:
+        out.append(f"Time below range {agp['tbr']:.1f} % on "
+                   f"{'a sulfonylurea' if 'sulfonylurea' in classes else 'basal insulin'}: consider reviewing dose/agent "
+                   "(lower-hypoglycaemia-risk options exist, e.g. DPP-4i/SGLT2i), especially with CKD or irregular meals.")
+    if p.get("egfr") and p["egfr"] < 60 and "biguanide" in classes:
+        out.append(f"eGFR {p['egfr']}: confirm metformin dose is appropriate for renal function.")
+    if agp.get("tar", 0) > 25:
+        out.append(f"Time above range {agp['tar']:.0f} %: review post-meal excursions (meal composition, portion, timing) "
+                   "and therapy intensification per guidelines.")
+    if ctx.get("dawn_effect") and ctx["dawn_effect"] > 0.15:
+        out.append("Twin detects a strong dawn phenomenon: early-morning glucose rise independent of meals.")
+    if ctx.get("sleep_last_h") is not None and ctx["sleep_last_h"] < 6:
+        out.append(f"Short sleep last night ({ctx['sleep_last_h']:.1f} h): the twin lowers today's insulin sensitivity; "
+                   "counsel on sleep regularity.")
+    if p.get("vitamin_b12") and p["vitamin_b12"] < 200 and "biguanide" in classes:
+        out.append(f"Vitamin B12 {p['vitamin_b12']} pg/mL on long-term metformin: consider supplementation per guidelines.")
+    if agp.get("cv", 0) > 36:
+        out.append(f"Glycaemic variability high (CV {agp['cv']:.0f} %).")
+    return out
+
+
+def _answer(q: str, ctx: dict) -> str:
+    ql = q.lower()
+    risks = ctx.get("risks", {})
+    if any(w in ql for w in ("hypo", "low", "drop")):
+        return (f"Predicted risk of glucose <70 mg/dL in the next hour is {risks.get('hypo', 0) * 100:.0f} %. "
+                f"7-day time below range is {ctx.get('agp_7d', {}).get('tbr', 0):.1f} %.")
+    if any(w in ql for w in ("why", "driver", "reason", "explain")) and ctx.get("alerts"):
+        a = ctx["alerts"][0]
+        return f"{a['title']}. Main drivers: " + "; ".join(d["text"] for d in a.get("drivers", [])[:3]) + "."
+    if any(w in ql for w in ("walk", "exercise", "rice", "meal", "what if", "what-if", "lunch", "dinner")) and ctx.get("recommendations"):
+        r = ctx["recommendations"]
+        return "Twin simulations (model estimates): " + "; ".join(
+            f"{x['label']}: peak {x['delta_peak']:+.0f} mg/dL, time >180 {x['delta_tar_min']:+.0f} min" for x in r[:3]) + "."
+    if any(w in ql for w in ("sleep",)):
+        s = ctx.get("sleep_last_h")
+        return f"Last night's sleep: {s:.1f} h." if s is not None else "No sleep data available for this patient."
+    return "The rule engine answers questions about hypoglycaemia risk, alert drivers, sleep and what-if scenarios; for free-form questions configure an Anthropic API key."
+
+
+def llm_available() -> bool:
+    if os.environ.get("MADHUTWIN_COPILOT_LLM", "1") == "0":
+        return False
+    return bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"))
+
+
+def generate(ctx: dict, question: str | None = None, engine: str = "auto") -> dict:
+    """Return {"engine": ..., "text": ...}. ``engine``: auto | rule | llm."""
+    if engine == "rule" or (engine == "auto" and not llm_available()):
+        return {"engine": "rule", "text": rule_based(ctx, question)}
+    try:
+        import anthropic
+
+        client = anthropic.Anthropic(max_retries=2, timeout=60.0)
+        user = ("Patient twin snapshot (JSON):\n```json\n" + json.dumps(ctx, default=float, indent=1) + "\n```\n\n"
+                + (f"Clinician question: {question}" if question else "Write the clinical summary."))
+        # Server-side refusal fallback ("default" routing) - see Anthropic docs on refusals and fallbacks.
+        response = client.beta.messages.create(
+            model=MODEL,
+            max_tokens=4000,
+            system=SYSTEM_PROMPT,
+            output_config={"effort": "low"},
+            betas=["server-side-fallback-2026-07-01"],
+            extra_body={"fallbacks": "default"},
+            messages=[{"role": "user", "content": user}],
+        )
+        if response.stop_reason == "refusal":
+            return {"engine": "rule", "text": rule_based(ctx, question), "note": "LLM declined; rule engine used."}
+        text = "".join(b.text for b in response.content if b.type == "text").strip()
+        if not text:
+            return {"engine": "rule", "text": rule_based(ctx, question), "note": "Empty LLM response; rule engine used."}
+        return {"engine": "llm", "model": response.model, "text": text}
+    except Exception as e:  # noqa: BLE001 - any failure must degrade gracefully to the rule engine
+        kind = type(e).__name__
+        return {"engine": "rule", "text": rule_based(ctx, question), "note": f"LLM unavailable ({kind}); rule engine used."}
