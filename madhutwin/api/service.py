@@ -208,6 +208,7 @@ class TwinService:
             {"stream": "Meal log", "detail": "Self-logged Indian meals with estimated macros (photo-log style)"},
         ]
         e["story_minute"] = self.story_minutes.get(pid)
+        e["usual_foods"] = {slot: self._usual_food(pid, slot) for slot in ("breakfast", "lunch", "dinner")}
         return _clean(e)
 
     def _forecast_curve(self, pid, minute, row, arrays, states, horizon=120):
@@ -372,7 +373,7 @@ class TwinService:
         r[mins > 120] = resid[-1] * np.exp(-(mins[mins > 120] - 120) / 60.0)
         out = []
         for j, sc in enumerate(scenarios):
-            g = np.clip(G[j + 1] + r, 40, 450)
+            g = np.clip(G[j + 1] + r, 40, 600)
             grid = g[::5]
             out.append({
                 "label": sc.get("label", f"Scenario {j + 1}"),

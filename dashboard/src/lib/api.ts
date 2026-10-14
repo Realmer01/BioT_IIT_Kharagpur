@@ -82,6 +82,7 @@ export interface Patient {
   consent: { purpose: string; granted: string; dpdp_notice_language: string; data_shared_with: string[]; retention_days: number };
   phenotype: Record<string, number>; phenotype_percentile: Record<string, number>; fold: number;
   data_sources: { stream: string; detail: string }[];
+  usual_foods?: Record<string, string>;
 }
 export interface Rec { label: string; kind: string; delta_peak: number; delta_tar_min: number; delta_tbr_min: number; peak: number; min: number }
 export interface ScenarioResult {

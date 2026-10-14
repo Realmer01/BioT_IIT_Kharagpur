@@ -35,3 +35,11 @@ docs/build/
 docs/team.json
 scripts/deck_data.py
 scripts/screenshots.py
+
+# Screenshots: only the ones the README shows are versioned
+docs/img/*
+!docs/img/patient_hypo.png
+!docs/img/cohort.png
+!docs/img/whatif.png
+!docs/img/agp.png
+!docs/img/architecture.png

@@ -39,10 +39,11 @@ export default function WhatIfTab({ p }: { p: Patient }) {
   useEffect(() => {
     if (!foods.length) return;
     const local = foods.filter((f) => f.slots.includes(slot) && (f.regions.includes(region) || f.regions.includes("all")));
-    const def = local.sort((a, b) => b.carbs * b.gi - a.carbs * a.gi)[0]?.id ?? "rice_sambar";
-    const base: Sc = { label: "Planned", food: def, portion: 1, mealMin: 15, walk: 0, walkStart: 35, walkMets: 4, sleep: null, drug: "none" };
+    const usual = p.usual_foods?.[slot];
+    const def = usual && foods.some((f) => f.id === usual) ? usual : local[0]?.id ?? "rice_sambar";
+    const base: Sc = { label: `Usual ${slot}`, food: def, portion: 1, mealMin: 15, walk: 0, walkStart: 35, walkMets: 4, sleep: null, drug: "none" };
     setSc([base, { ...base, label: "With 15-min walk", walk: 15 }]);
-  }, [foods, slot, region]);
+  }, [foods, slot, region, p.usual_foods]);
 
   useEffect(() => {
     if (!sc.length) return;
@@ -173,14 +174,17 @@ export default function WhatIfTab({ p }: { p: Patient }) {
               <tbody>
                 {res.scenarios.map((s, j) => {
                   const d = s.time_above_180_min - base.time_above_180_min;
+                  const dm = Math.round(s.mean - base.mean);
+                  const dp = Math.round(s.peak - base.peak);
+                  const sign = (v: number) => (v > 0 ? `+${v}` : `${v}`);
                   return (
                     <tr key={j} className="border-b last:border-0">
                       <td className="py-1.5"><span className="mr-1.5 inline-block h-2 w-2 rounded-full" style={{ background: COLORS[j] }} />{s.label}</td>
                       <td className="tnum text-right">{Math.round(s.peak)}</td><td className="tnum text-right">{Math.round(s.min)}</td>
                       <td className="tnum text-right">{s.time_above_180_min} min</td><td className="tnum text-right">{s.time_below_70_min} min</td>
                       <td className="tnum text-right">{Math.round(s.mean)}</td>
-                      <td className="tnum text-right" style={{ color: j === 0 ? "var(--muted)" : d < 0 ? "var(--good-ink)" : "var(--ink-2)" }}>
-                        {j === 0 ? "baseline" : `${d > 0 ? "+" : ""}${d} min >180 · peak ${s.peak - base.peak > 0 ? "+" : ""}${Math.round(s.peak - base.peak)}`}
+                      <td className="tnum text-right" style={{ color: j === 0 ? "var(--muted)" : dm < 0 || d < 0 ? "var(--good-ink)" : "var(--ink-2)" }}>
+                        {j === 0 ? "baseline" : `peak ${sign(dp)} · mean ${sign(dm)} · ${sign(d)} min >180`}
                       </td>
                     </tr>
                   );
