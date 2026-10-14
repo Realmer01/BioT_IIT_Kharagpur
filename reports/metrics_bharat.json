@@ -1,0 +1,241 @@
+{
+  "note": "SYNTHETIC Bharat cohort, held-out patients, monitor period; forecasts are conditional ('if no new food') and scored on windows without a logged meal",
+  "regression": {
+    "Persistence": {
+      "30": {
+        "n": 201329,
+        "rmse": 22.707756296312624,
+        "mae": 14.067099996087881,
+        "mard": 8.408628127661798,
+        "clarke_a": 91.09815277481138,
+        "clarke_ab": 99.4029672824084
+      },
+      "60": {
+        "n": 180947,
+        "rmse": 32.728739277615816,
+        "mae": 21.127270516270215,
+        "mard": 13.015758782292943,
+        "clarke_a": 79.20164468048655,
+        "clarke_ab": 98.32216063267144
+      },
+      "90": {
+        "n": 162798,
+        "rmse": 36.93431538747884,
+        "mae": 25.11377048971365,
+        "mard": 16.517924404770916,
+        "clarke_a": 70.18390889322966,
+        "clarke_ab": 97.71987370852221
+      },
+      "120": {
+        "n": 145107,
+        "rmse": 39.72313204131268,
+        "mae": 27.762628774127506,
+        "mard": 19.19130562298203,
+        "clarke_a": 64.08719083159323,
+        "clarke_ab": 97.43913112392923
+      }
+    },
+    "Fusion (no twin)": {
+      "30": {
+        "n": 201329,
+        "rmse": 9.92441570180924,
+        "mae": 6.655914345302337,
+        "mard": 4.355262073680196,
+        "clarke_a": 98.90130085581312,
+        "clarke_ab": 99.93195217777865
+      },
+      "60": {
+        "n": 180947,
+        "rmse": 12.980119768582028,
+        "mae": 8.314824534157344,
+        "mard": 5.474959130857322,
+        "clarke_a": 97.60979734397365,
+        "clarke_ab": 99.76070341039089
+      },
+      "90": {
+        "n": 162798,
+        "rmse": 13.911574964051063,
+        "mae": 8.960139665197788,
+        "mard": 6.12796249270076,
+        "clarke_a": 96.62649418297522,
+        "clarke_ab": 99.59581813044386
+      },
+      "120": {
+        "n": 145107,
+        "rmse": 14.254009015572104,
+        "mae": 9.268340410433085,
+        "mard": 6.522878915055205,
+        "clarke_a": 95.8761465677052,
+        "clarke_ab": 99.56239189012246
+      }
+    },
+    "MadhuTwin hybrid": {
+      "30": {
+        "n": 201329,
+        "rmse": 8.947314520103106,
+        "mae": 6.2191386192963485,
+        "mard": 4.108940509475502,
+        "clarke_a": 99.38955639773704,
+        "clarke_ab": 99.9329455766432
+      },
+      "60": {
+        "n": 180947,
+        "rmse": 12.246373819508225,
+        "mae": 7.935942215398049,
+        "mard": 5.259719997390967,
+        "clarke_a": 98.0519157543369,
+        "clarke_ab": 99.79330964315518
+      },
+      "90": {
+        "n": 162798,
+        "rmse": 13.576837434088254,
+        "mae": 8.721251081710399,
+        "mard": 5.957784523693205,
+        "clarke_a": 96.87465447978477,
+        "clarke_ab": 99.67444317497758
+      },
+      "120": {
+        "n": 145107,
+        "rmse": 14.126689870069212,
+        "mae": 9.110170569130231,
+        "mard": 6.4168351754810615,
+        "clarke_a": 95.88648376715113,
+        "clarke_ab": 99.60098410138725
+      }
+    }
+  },
+  "events": {
+    "ev_hyper": {
+      "MadhuTwin hybrid": {
+        "n": 164184,
+        "prevalence": 0.2603968718023681,
+        "auroc": 0.9264649849359725,
+        "auprc": 0.8302834511955164,
+        "sensitivity": 0.7026641405281501,
+        "specificity": 0.924450922746251,
+        "ppv": 0.7660589060308556,
+        "brier": 0.09322331148289587
+      },
+      "Fusion (no twin)": {
+        "n": 164184,
+        "prevalence": 0.2603968718023681,
+        "auroc": 0.9246228565228517,
+        "auprc": 0.8206826213331738,
+        "sensitivity": 0.7051668888732955,
+        "specificity": 0.919271026344179,
+        "ppv": 0.7546244149082626,
+        "brier": 0.09521885825970988
+      }
+    },
+    "ev_spike": {
+      "MadhuTwin hybrid": {
+        "n": 223400,
+        "prevalence": 0.20477170993733215,
+        "auroc": 0.9434696583891737,
+        "auprc": 0.8087691517805657,
+        "sensitivity": 0.711778078957723,
+        "specificity": 0.9362018305245027,
+        "ppv": 0.7417929149105821,
+        "brier": 0.07614510496790731
+      }
+    },
+    "ev_hypo": {
+      "MadhuTwin hybrid": {
+        "n": 223153,
+        "prevalence": 0.0076987537698350456,
+        "auroc": 0.9908027325625242,
+        "auprc": 0.500494746655967,
+        "sensitivity": 0.31431897555296856,
+        "specificity": 0.9980039289181927,
+        "ppv": 0.5498981670061099,
+        "brier": 0.005491926943908113
+      },
+      "Fusion (no twin)": {
+        "n": 223153,
+        "prevalence": 0.0076987537698350456,
+        "auroc": 0.9911316788500912,
+        "auprc": 0.5228727518736243,
+        "sensitivity": 0.21885913853317812,
+        "specificity": 0.9991509923905435,
+        "ppv": 0.6666666666666666,
+        "brier": 0.005279395412650798
+      }
+    }
+  },
+  "episodes": {
+    "MadhuTwin hybrid": {
+      "episodes": 1989,
+      "detected_ge15min": 1866,
+      "episode_sensitivity": 0.9381598793363499,
+      "median_lead_min": 95.0,
+      "false_alerts_per_day": 1.555540118096559,
+      "monitored_days": 799.7222222222234
+    },
+    "Fusion (no twin)": {
+      "episodes": 1989,
+      "detected_ge15min": 1855,
+      "episode_sensitivity": 0.9326294620412268,
+      "median_lead_min": 100.0,
+      "false_alerts_per_day": 1.6130600903091328,
+      "monitored_days": 799.7222222222234
+    }
+  },
+  "episodes_hypo": {
+    "MadhuTwin hybrid": {
+      "episodes": 135,
+      "detected_ge15min": 54,
+      "episode_sensitivity": 0.4,
+      "median_lead_min": 55.0,
+      "false_alerts_per_day": 0.10878777353247639,
+      "monitored_days": 799.7222222222234
+    },
+    "Fusion (no twin)": {
+      "episodes": 135,
+      "detected_ge15min": 43,
+      "episode_sensitivity": 0.31851851851851853,
+      "median_lead_min": 55.0,
+      "false_alerts_per_day": 0.07002431399791584,
+      "monitored_days": 799.7222222222234
+    }
+  },
+  "episodes_hypo_by_threshold": {
+    "0.25": {
+      "episodes": 135,
+      "detected_ge15min": 77,
+      "episode_sensitivity": 0.5703703703703704,
+      "median_lead_min": 55.0,
+      "false_alerts_per_day": 0.1425494963529001,
+      "monitored_days": 799.7222222222234
+    },
+    "0.5": {
+      "episodes": 135,
+      "detected_ge15min": 54,
+      "episode_sensitivity": 0.4,
+      "median_lead_min": 55.0,
+      "false_alerts_per_day": 0.10878777353247639,
+      "monitored_days": 799.7222222222234
+    }
+  },
+  "hypo_alert_threshold_dashboard": 0.25,
+  "intervals": {
+    "30": {
+      "coverage": 0.9029548649225894,
+      "mean_width": 26.026852352880706
+    },
+    "60": {
+      "coverage": 0.9038226663056033,
+      "mean_width": 33.48225163239971
+    },
+    "90": {
+      "coverage": 0.9078735611002592,
+      "mean_width": 37.32147772225964
+    },
+    "120": {
+      "coverage": 0.9046083235129938,
+      "mean_width": 38.099916355408226
+    }
+  },
+  "n_patients": 80,
+  "n_rows": 226307,
+  "runtime_s": 1470.6
+}
