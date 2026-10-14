@@ -1,0 +1,9 @@
+services:
+  madhutwin:
+    build: .
+    image: madhutwin:latest
+    ports:
+      - "8000:8000"
+    environment:
+      # Optional: enables the hosted language-model engine of the copilot (offline rule engine otherwise)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}

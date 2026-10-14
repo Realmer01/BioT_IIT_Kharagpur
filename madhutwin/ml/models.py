@@ -32,6 +32,7 @@ CLF_PARAMS = dict(n_estimators=350, learning_rate=0.04, max_depth=5, min_child_w
                   eval_metric="logloss")
 EVENTS = ("ev_hyper", "ev_spike", "ev_hypo")
 ALPHA = 0.10  # 90 % prediction intervals
+QUANT_TREES = 300
 
 
 def fit_regressor(X: pd.DataFrame, y: np.ndarray) -> xgb.XGBRegressor:
@@ -41,7 +42,7 @@ def fit_regressor(X: pd.DataFrame, y: np.ndarray) -> xgb.XGBRegressor:
 
 def fit_quantiles(X: pd.DataFrame, y: np.ndarray, alpha: float = ALPHA) -> xgb.XGBRegressor:
     ok = np.isfinite(y)
-    params = {**REG_PARAMS, "n_estimators": 300, "objective": "reg:quantileerror",
+    params = {**REG_PARAMS, "n_estimators": QUANT_TREES, "objective": "reg:quantileerror",
               "quantile_alpha": np.array([alpha / 2, 1 - alpha / 2])}
     return xgb.XGBRegressor(**params).fit(X[ok], y[ok])
 

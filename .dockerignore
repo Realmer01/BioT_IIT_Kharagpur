@@ -1,0 +1,11 @@
+.git
+data/
+models/
+dashboard/node_modules
+dashboard/dist
+docs/
+tests/
+**/__pycache__
+*.pyc
+reports/*.parquet
+reports/pipeline.log

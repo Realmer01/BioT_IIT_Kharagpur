@@ -8,10 +8,13 @@
   SYNTHETIC (they add drug-induced hypoglycaemia, sleep and step streams that
   CGMacros does not contain).
 
-Usage:  python scripts/train_deploy.py
+Usage:  python scripts/train_deploy.py            # full models, writes reports/metrics_bharat.json
+        python scripts/train_deploy.py --quick    # demo build: fewer trees, works without CGMacros,
+                                                  # does not overwrite the committed metrics
 Output: models/fold_{k}.joblib, models/assignments.json, reports/metrics_bharat.json,
         data/processed/bharat_predictions.parquet
 """
+import argparse
 import json
 import sys
 import time
@@ -27,15 +30,26 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from madhutwin.config import HORIZONS, MODELS, PROCESSED, RANDOM_SEED, REPORTS  # noqa: E402
 from madhutwin.features import feature_groups  # noqa: E402
 from madhutwin.ml import metrics as MT  # noqa: E402
+from madhutwin.ml import models as MM  # noqa: E402
 from madhutwin.ml.models import HybridForecaster, fit_classifier, fit_regressor  # noqa: E402
 
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--quick", action="store_true", help="demo build: fewer trees; metrics are not written")
+    args = ap.parse_args()
+    if args.quick:
+        MM.REG_PARAMS["n_estimators"], MM.CLF_PARAMS["n_estimators"], MM.QUANT_TREES = 120, 100, 100
     t0 = time.time()
-    real = pd.read_parquet(PROCESSED / "cgmacros_features.parquet")
     syn = pd.read_parquet(PROCESSED / "bharat_features.parquet")
-    real["source"] = "real"
     syn["source"] = "synthetic"
+    real_path = PROCESSED / "cgmacros_features.parquet"
+    if real_path.exists():
+        real = pd.read_parquet(real_path)
+        real["source"] = "real"
+    else:
+        print("CGMacros features not found: training on the synthetic cohort only (run scripts/build_cgmacros.py for the full model)")
+        real = syn.iloc[:0].copy()
     df = pd.concat([real, syn], ignore_index=True)
     feats = [c for c in df.columns if c.startswith(("cgm_", "wear_", "meal_", "ehr_", "ctx_", "twin_"))]
     feats = [c for c in feats if df[c].notna().any()]
@@ -111,8 +125,9 @@ def main():
     res["n_patients"] = int(ev["patient_id"].nunique())
     res["n_rows"] = int(len(ev))
     res["runtime_s"] = round(time.time() - t0, 1)
-    with open(REPORTS / "metrics_bharat.json", "w") as f:
-        json.dump(res, f, indent=2, default=float)
+    if not args.quick:
+        with open(REPORTS / "metrics_bharat.json", "w") as f:
+            json.dump(res, f, indent=2, default=float)
     with open(MODELS / "assignments.json", "w") as f:
         json.dump({"features": feats, "patient_fold": assign}, f, indent=1)
     keep = ["patient_id", "minute", "time", "g0", "phase", "next_meal_min"] + [c for c in P.columns if c.startswith(
