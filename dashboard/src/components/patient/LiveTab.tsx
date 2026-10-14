@@ -29,8 +29,8 @@ export default function LiveTab({ p }: { p: Patient }) {
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
       <div className="min-w-0 space-y-4">
-        <Card title="Glucose: last hours and the twin's 2-hour forecast"
-          subtitle={tl.data ? `As of ${fmtDateTime(tl.data.time)} · shaded band = 90 % conformal prediction interval · green zone = target 70–180 mg/dL` : ""}
+        <Card title="Glucose and the twin's 2-hour forecast"
+          subtitle={tl.data ? `As of ${fmtDateTime(tl.data.time)} · forecast assumes no new food (meals enter via the what-if simulator) · band = 90 % conformal interval · green zone = target 70–180 mg/dL` : ""}
           right={
             <div className="flex items-center gap-1">
               {[6, 12, 24].map((h) => (
@@ -43,7 +43,7 @@ export default function LiveTab({ p }: { p: Patient }) {
           </div>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
             <Legend items={[
-              { label: "CGM glucose", color: "var(--s1)" }, { label: "Twin forecast", color: "var(--s2)" }, { label: "90 % interval", color: "var(--s2)", band: true },
+              { label: "CGM glucose", color: "var(--s1)" }, { label: "Twin forecast (no new food)", color: "var(--s2)" }, { label: "90 % interval", color: "var(--s2)", band: true },
               ...(showTrack ? [{ label: "Forecast made 60 min earlier", color: "var(--s3)", dash: true }] : []),
               ...(showTwin ? [{ label: "Physiology only", color: "var(--ink-2)", dash: true }] : []),
             ]} />
@@ -75,12 +75,13 @@ export default function LiveTab({ p }: { p: Patient }) {
               <div className="mt-3 grid grid-cols-3 gap-2">
                 {["30", "60", "120"].map((h) => (
                   <div key={h} className="rounded-lg bg-page px-2 py-1.5">
-                    <div className="text-[11px] text-muted">in {h} min</div>
+                    <div className="text-[11px] text-muted">in {h} min*</div>
                     <div className="tnum text-lg font-semibold">{Math.round(r.forecast[h].pred)}</div>
                     <div className="tnum text-[10px] text-ink2">{Math.round(r.forecast[h].lo)}–{Math.round(r.forecast[h].hi)}</div>
                   </div>
                 ))}
               </div>
+              <div className="mt-1 text-[10px] text-muted">* expected if no new food is eaten; range = 90 % interval</div>
               <div className="mt-3 space-y-2">
                 <RiskMeter label="Hyperglycaemia >180 within 2 h" p={r.probabilities.hyper_2h} color="var(--serious)" />
                 <RiskMeter label="Hypoglycaemia <70 within 1 h" p={r.probabilities.hypo_1h} color="var(--critical)" />

@@ -285,13 +285,13 @@ function PhysiologyCard({ m }: { m: Any }) {
 
 function SyntheticCard({ b }: { b: Any }) {
   const r = b.regression;
-  const hy = b.episodes_hypo?.[MAIN];
+  const hy = b.episodes_hypo_by_threshold?.["0.25"] ?? b.episodes_hypo?.[MAIN];
   return (
     <Card title="Bharat synthetic cohort (SYNTHETIC)" subtitle={`${b.n_patients} fictional Indian patients, held out by fold; adds sulfonylurea/insulin hypoglycaemia, sleep and step streams`}>
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <Mini label="2-h RMSE" v={`${r[MAIN]["120"].rmse.toFixed(1)}`} s={`persistence ${r.Persistence["120"].rmse.toFixed(1)}`} />
         <Mini label="Hypo AUROC (1 h)" v={b.events.ev_hypo[MAIN].auroc?.toFixed(2)} s={`prevalence ${(b.events.ev_hypo[MAIN].prevalence * 100).toFixed(1)} %`} />
-        <Mini label="Hypo episodes flagged ≥10 min ahead" v={hy ? `${(hy.episode_sensitivity * 100).toFixed(0)} %` : "–"} s={hy ? `${hy.detected_ge15min}/${hy.episodes} · lead ${Math.round(hy.median_lead_min)} min` : ""} />
+        <Mini label="Hypo episodes flagged ≥10 min ahead (alert ≥25 %)" v={hy ? `${(hy.episode_sensitivity * 100).toFixed(0)} %` : "–"} s={hy ? `${hy.detected_ge15min}/${hy.episodes} · lead ${Math.round(hy.median_lead_min)} min · ${hy.false_alerts_per_day.toFixed(2)} false/day` : ""} />
         <Mini label="Hyper AUROC (2 h)" v={b.events.ev_hyper[MAIN].auroc.toFixed(2)} s={`interval coverage ${(b.intervals["120"].coverage * 100).toFixed(0)} %`} />
       </div>
       <p className="mt-2 text-xs text-ink2">Synthetic results test the pipeline on Indian diets and drug mixes; they are not evidence of real-world accuracy and are never mixed with the real-data numbers.</p>

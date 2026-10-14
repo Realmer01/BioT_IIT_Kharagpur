@@ -108,27 +108,40 @@ class TwinService:
         return int(np.clip(minute, 4 * 60, self.end_minute))
 
     def _story_minute(self, pid) -> int:
-        """A good replay moment for each featured story (shortly before the event)."""
+        """Replay start for each featured story, chosen from the data, not by hand.
+
+        Hypoglycaemia stories start 15 min before the first moment the deployed
+        model actually raises its alert ahead of the first CGM reading <70 mg/dL;
+        meal stories start just before the meal is logged, so the replay shows
+        the alert appearing as the clinician would have seen it.
+        """
         e = self.ehr[pid]
-        mn = self.minute[pid]
-        G = mn["true_glucose"].to_numpy()
         story = e["story"]
-        day = {"skip_lunch_walk": 11, "fasting_day": 10, "wedding_feast": 8, "late_dinner_short_sleep": 4}.get(story)
-        if story in ("skip_lunch_walk", "fasting_day"):
-            sl = slice(day * 1440 + 11 * 60, day * 1440 + 20 * 60)
-            return int(sl.start + np.argmin(G[sl]) - 55)
-        if story == "dawn":
-            return 9 * 1440 + int(3.8 * 60)
+        cgm = self.minute[pid]["cgm"].to_numpy()
+        P = self.preds[pid]
         meals = self.meals[pid]
         mm = ((pd.to_datetime(meals["time"]) - S.START).dt.total_seconds() // 60).astype(int).to_numpy()
         lunches = mm[meals["meal_type"].eq("lunch").to_numpy()]
+        if story in ("skip_lunch_walk", "fasting_day"):
+            day = 11 if story == "skip_lunch_walk" else 10
+            win = np.arange(day * 1440 + 11 * 60, day * 1440 + 21 * 60)
+            low = win[np.nan_to_num(cgm[win], nan=999) < 70]
+            if len(low):
+                onset = int(low[0])
+                pw = P[(P["minute"] >= onset - 90) & (P["minute"] < onset) & (P["p_ev_hypo"] >= HYPO_THR)]
+                first = int(pw["minute"].iloc[0]) if len(pw) else onset - 30
+                return first - 15
+            return day * 1440 + 14 * 60
+        if story == "dawn":
+            return 9 * 1440 + int(3.5 * 60)
+        day = {"wedding_feast": 8, "late_dinner_short_sleep": 4}.get(story)
         if day is not None:
             cand = [m for m in lunches if m // 1440 == day]
             if cand:
-                return int(cand[0] + 10)
+                return int(cand[0] - 10)
         if story == "rice_spikes" and len(lunches):
-            peaks = [np.nanmax(G[m:m + 150]) for m in lunches]
-            return int(lunches[int(np.argmax(peaks))] + 10)
+            peaks = [np.nanmax(cgm[m:m + 150]) for m in lunches]
+            return int(lunches[int(np.argmax(peaks))] - 10)
         return self.end_minute
 
     # ------------------------------------------------------------------ cohort
@@ -148,7 +161,7 @@ class TwinService:
                            + ((win["p_ev_hypo"] >= HYPO_THR) & ~(win["p_ev_hypo"].shift(1) >= HYPO_THR)).sum())
             p_hypo, p_hyper = float(r["p_ev_hypo"]), float(r["p_ev_hyper"])
             g0 = float(r["g0"])
-            status = "urgent" if p_hypo >= HYPO_THR or g0 < 70 else "warning" if (p_hyper >= HYPER_THR or g0 > 250) else \
+            status = "urgent" if (p_hypo >= HYPO_THR and g0 < 120) or g0 < 70 else "warning" if (p_hyper >= HYPER_THR or g0 > 250) else \
                 "watch" if (s7.get("tir", 100) < 50 or s7.get("tbr", 0) > 4) else "stable"
             rows.append({
                 "patient_id": pid, "name": e["name"], "age": e["age"], "sex": e["sex"], "city": e["city"],
@@ -258,17 +271,25 @@ class TwinService:
         alerts = []
         p_hypo, p_hyper, p_spike = float(row["p_ev_hypo"]), float(row["p_ev_hyper"]), float(row["p_ev_spike"])
         g0 = float(row["g0"])
-        if p_hypo >= HYPO_THR or preds.min() < 70:
+        food_on_board = (values.get("twin_gut_carbs") or 0) >= 10 or (values.get("meal_min_since") or 999) <= 60
+        hypo_actions = ["Patient nudge: take 15 g fast-acting carbohydrate if <70 mg/dL and recheck in 15 min (rule of 15)",
+                        "Avoid further exercise until glucose is stable",
+                        "Clinician: review sulfonylurea/insulin dose and meal regularity"]
+        if g0 < 70:
+            drivers, streams = explain("ev_hypo")
+            alerts.append({"type": "low", "severity": "urgent", "probability": 1.0,
+                           "title": f"Glucose below 70 mg/dL now ({g0:.0f} mg/dL)", "eta_min": 0,
+                           "predicted_min": float(min(preds.min(), g0)), "drivers": drivers, "streams": streams,
+                           "actions": hypo_actions})
+        elif p_hypo >= HYPO_THR or preds.min() < 70:
             below = mins[preds < 70]
             drivers, streams = explain("ev_hypo")
             alerts.append({"type": "hypo", "severity": "urgent", "probability": p_hypo,
                            "title": "Hypoglycaemia predicted" + (f" in ~{int(below[0])} min" if len(below) else " within 1 h"),
                            "eta_min": int(below[0]) if len(below) else None, "predicted_min": float(preds.min()),
-                           "drivers": drivers, "streams": streams,
-                           "actions": ["Patient nudge: take 15 g fast-acting carbohydrate if <70 mg/dL and recheck in 15 min (rule of 15)",
-                                       "Avoid unplanned exercise until glucose is stable",
-                                       "Clinician: review sulfonylurea/insulin dose and meal regularity"]})
-        if g0 <= 180 and (p_hyper >= HYPER_THR or preds.max() > 180):
+                           "drivers": drivers, "streams": streams, "actions": hypo_actions})
+        hypo_active = bool(alerts)
+        if not hypo_active and g0 <= 180 and (p_hyper >= HYPER_THR or preds.max() > 180):
             above = mins[preds > 180]
             drivers, streams = explain("ev_hyper")
             alerts.append({"type": "hyper", "severity": "warning", "probability": p_hyper,
@@ -277,18 +298,18 @@ class TwinService:
                            "drivers": drivers, "streams": streams,
                            "actions": ["Patient nudge: a 15-min brisk walk now (twin-estimated effect below)",
                                        "Review meal composition: swap to lower-glycaemic options at the next meal"]})
-        elif g0 > 180:
+        elif not hypo_active and g0 > 180:
             drivers, streams = explain("ev_spike")
             alerts.append({"type": "high", "severity": "warning", "probability": 1.0,
                            "title": f"Above range now ({g0:.0f} mg/dL), forecast {preds[-1]:.0f} mg/dL in 2 h",
                            "eta_min": 0, "predicted_peak": float(max(preds.max(), g0)), "drivers": drivers, "streams": streams,
                            "actions": ["Patient nudge: light activity and hydration", "Clinician: review if persistent (>25 % time above range)"]})
-        elif p_spike >= SPIKE_THR:
+        elif not hypo_active and food_on_board and p_spike >= SPIKE_THR:
             drivers, streams = explain("ev_spike")
             alerts.append({"type": "spike", "severity": "info", "probability": p_spike,
-                           "title": "Large glucose rise (+50 mg/dL) likely within 2 h", "eta_min": None,
+                           "title": "Large post-meal rise (+50 mg/dL) likely within 2 h", "eta_min": None,
                            "predicted_peak": float(preds.max()), "drivers": drivers, "streams": streams,
-                           "actions": ["Patient nudge: consider a short walk after the meal"]})
+                           "actions": ["Patient nudge: a short walk 15-30 min after the meal"]})
         return _clean({"patient_id": pid, "time": _iso(_time_of(int(row["minute"]))), "glucose": g0,
                        "slope": float(values.get("cgm_d15") or 0) / 15.0,
                        "probabilities": {"hyper_2h": p_hyper, "hypo_1h": p_hypo, "spike_2h": p_spike},

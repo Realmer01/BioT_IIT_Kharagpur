@@ -48,7 +48,7 @@ export interface Cohort {
 export interface Driver { feature: string; text: string; impact: number; direction: string }
 export interface StreamShare { stream: string; label: string; share: number; signed: number }
 export interface Alert {
-  type: "hypo" | "hyper" | "high" | "spike"; severity: "urgent" | "warning" | "info"; probability: number; title: string;
+  type: "low" | "hypo" | "hyper" | "high" | "spike"; severity: "urgent" | "warning" | "info"; probability: number; title: string;
   eta_min: number | null; predicted_peak?: number; predicted_min?: number; drivers: Driver[]; streams: StreamShare[]; actions: string[];
 }
 export interface Risk {
