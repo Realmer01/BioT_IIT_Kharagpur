@@ -41,7 +41,7 @@ export default function Validation() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <HorizonCard reg={reg} />
+        <HorizonCard reg={reg} cond={m.regression_conditional} />
         <AblationCard m={m} />
       </div>
       <div className="grid gap-4 xl:grid-cols-2">
@@ -70,7 +70,7 @@ export default function Validation() {
   );
 }
 
-function HorizonCard({ reg }: { reg: Any }) {
+function HorizonCard({ reg, cond }: { reg: Any; cond?: Any }) {
   const series = [
     { name: MAIN, color: "var(--s1)", w: 2.5 },
     { name: "Fusion (streams + EHR)", color: "var(--s2)", w: 2 },
@@ -101,6 +101,13 @@ function HorizonCard({ reg }: { reg: Any }) {
           <tr key={n} className={n === MAIN ? "font-semibold" : ""}><td className="py-0.5">{n}</td>{H.map((h) => <td key={h} className="tnum text-right">{reg[n][h].rmse.toFixed(1)}</td>)}<td className="tnum text-right">{reg[n]["120"].clarke_ab.toFixed(1)}%</td></tr>
         ))}</tbody>
       </table>
+      {cond && (
+        <p className="mt-3 rounded-lg bg-page px-3 py-2 text-xs text-ink2">
+          <b className="text-ink">Deployed forecaster (conditional on no new food), meal-free windows:</b>{" "}
+          2-hour RMSE {cond[`${MAIN} [conditional]`]["120"].rmse.toFixed(1)} vs {cond.Persistence["120"].rmse.toFixed(1)} mg/dL for persistence
+          and {cond["Fusion (streams + EHR)"]["120"].rmse.toFixed(1)} for the unconditional fusion model. New meals are added by the twin's simulation.
+        </p>
+      )}
     </Card>
   );
 }
