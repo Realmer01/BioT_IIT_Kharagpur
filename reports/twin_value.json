@@ -1,0 +1,53 @@
+{
+  "cold_start": {
+    "table": {
+      "EHR prior|0.0": {
+        "rmse_60": 43.21,
+        "rmse_120": 42.51
+      },
+      "EHR prior|0.5": {
+        "rmse_60": 41.84,
+        "rmse_120": 40.44
+      },
+      "EHR prior|1.0": {
+        "rmse_60": 36.7,
+        "rmse_120": 36.92
+      },
+      "EHR prior|2.0": {
+        "rmse_60": 31.07,
+        "rmse_120": 34.26
+      },
+      "EHR prior|4.0": {
+        "rmse_60": 29.25,
+        "rmse_120": 32.75
+      },
+      "Population prior|0.0": {
+        "rmse_60": 56.84,
+        "rmse_120": 53.59
+      },
+      "Population prior|0.5": {
+        "rmse_60": 43.63,
+        "rmse_120": 41.34
+      },
+      "Population prior|1.0": {
+        "rmse_60": 36.8,
+        "rmse_120": 36.78
+      },
+      "Population prior|2.0": {
+        "rmse_60": 30.83,
+        "rmse_120": 34.39
+      },
+      "Population prior|4.0": {
+        "rmse_60": 28.92,
+        "rmse_120": 32.66
+      }
+    },
+    "ehr_prior_better_share_120": {
+      "0.0": 0.422,
+      "0.5": 0.533,
+      "1.0": 0.533,
+      "2.0": 0.467,
+      "4.0": 0.489
+    }
+  }
+}
