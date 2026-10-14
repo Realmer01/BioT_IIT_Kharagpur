@@ -485,15 +485,8 @@ class TwinService:
             if p.exists():
                 with open(p) as f:
                     out[name] = json.load(f)
-        oof = REPORTS / "oof_cgmacros.parquet"
-        if oof.exists():
-            d = pd.read_parquet(oof, columns=["y_60", "MadhuTwin hybrid|60", "y_120", "MadhuTwin hybrid|120"]).dropna()
-            d = d.sample(min(2000, len(d)), random_state=0)
-            out["clarke_sample"] = {"60": d[["y_60", "MadhuTwin hybrid|60"]].round(1).values.tolist(),
-                                    "120": d[["y_120", "MadhuTwin hybrid|120"]].round(1).values.tolist()}
-        meals = REPORTS / "meals_cgmacros.parquet"
-        if meals.exists():
-            m = pd.read_parquet(meals)
-            m = m[m["phase"].eq("monitor")]
-            out["ppgr_sample"] = m[["peak_rise", "pred|MadhuTwin hybrid", "pred|Carbs only (linear)", "m_carbs"]].round(1).values.tolist()
+        samples = REPORTS / "evidence_samples.json"
+        if samples.exists():
+            with open(samples) as f:
+                out.update(json.load(f))
         return _clean(out)

@@ -40,6 +40,18 @@ def main():
     reg = m["regression"]
     H = ["30", "60", "90", "120"]
 
+    # 0. small, committed samples for the dashboard's Evidence page (parquet outputs are not versioned)
+    oof_s = pd.read_parquet(REPORTS / "oof_cgmacros.parquet", columns=["y_60", f"{MAIN}|60", "y_120", f"{MAIN}|120"]).dropna()
+    oof_s = oof_s.sample(min(2000, len(oof_s)), random_state=0).round(1)
+    ml = pd.read_parquet(REPORTS / "meals_cgmacros.parquet")
+    ml = ml[ml["phase"].eq("monitor")]
+    samples = {
+        "clarke_sample": {"60": oof_s[["y_60", f"{MAIN}|60"]].values.tolist(), "120": oof_s[["y_120", f"{MAIN}|120"]].values.tolist()},
+        "ppgr_sample": ml[["peak_rise", f"pred|{MAIN}", "pred|Carbs only (linear)", "m_carbs"]].round(1).values.tolist(),
+    }
+    json.dump(samples, open(REPORTS / "evidence_samples.json", "w"))
+    print("wrote evidence_samples.json")
+
     # 1. RMSE by horizon
     fig, ax = plt.subplots(figsize=(6.2, 3.6))
     ends = []
