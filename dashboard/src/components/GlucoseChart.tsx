@@ -24,6 +24,17 @@ export default function GlucoseChart({ tl, showFuture, showTrack, showTwin, heig
     return { rows, domain: [lo, hi] as [number, number], now, yMax: Math.min(400, Math.ceil((vmax + 15) / 50) * 50) };
   }, [tl, showFuture, showTrack]);
 
+  // meal markers: skip small drinks' labels, stagger labels that would collide
+  const mealMarks = useMemo(() => {
+    let last = -Infinity, lvl = 0;
+    return tl.meals.map((ml) => {
+      const ts = new Date(ml.t).getTime();
+      const show = !(ml.slot === "drink" && ml.carbs < 20);
+      if (show) { lvl = ts - last < 80 * 60e3 ? (lvl + 1) % 3 : 0; last = ts; }
+      return { ...ml, ts, show, lvl };
+    });
+  }, [tl.meals]);
+
   const ticks = useMemo(() => {
     const out: number[] = [];
     const step = 3 * 3600e3;
@@ -34,7 +45,7 @@ export default function GlucoseChart({ tl, showFuture, showTrack, showTwin, heig
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <ComposedChart data={rows} margin={{ top: 18, right: 12, bottom: 0, left: -12 }}>
+      <ComposedChart data={rows} margin={{ top: 18, right: 30, bottom: 0, left: -12 }}>
         <CartesianGrid stroke="var(--grid)" vertical={false} />
         <ReferenceArea y1={70} y2={180} fill="var(--band)" stroke="none" ifOverflow="extendDomain" />
         <XAxis dataKey="ts" type="number" scale="time" domain={domain} ticks={ticks} tickFormatter={(v) => fmtTime(new Date(v))}
@@ -43,9 +54,12 @@ export default function GlucoseChart({ tl, showFuture, showTrack, showTwin, heig
         <ReferenceLine y={70} stroke="var(--critical)" strokeWidth={1} label={{ value: "70", position: "right", fill: "var(--critical)", fontSize: 10 }} />
         <ReferenceLine y={180} stroke="var(--warning)" strokeWidth={1} label={{ value: "180", position: "right", fill: "var(--ink-2)", fontSize: 10 }} />
         <ReferenceArea x1={now} x2={domain[1]} fill="var(--page)" fillOpacity={0.55} stroke="none" />
-        {tl.meals.map((ml) => (
-          <ReferenceLine key={ml.t + ml.name} x={new Date(ml.t).getTime()} stroke="var(--axis)" strokeWidth={1}
-            label={{ value: `${SLOT[ml.slot] ?? "Meal"} ${Math.round(ml.carbs)}g`, position: "insideTopLeft", fill: "var(--ink-2)", fontSize: 10 }} />
+        {mealMarks.map((ml) => (
+          <ReferenceLine key={ml.t + ml.name} x={ml.ts} stroke="var(--axis)" strokeWidth={1} strokeDasharray={ml.show ? undefined : "2 3"}
+            label={ml.show ? (p: any) => (
+              <text x={p.viewBox.x + 4} y={p.viewBox.y + 11 + ml.lvl * 12} fontSize={10} fill="var(--ink-2)">
+                {`${SLOT[ml.slot] ?? "Meal"} ${Math.round(ml.carbs)}g`}
+              </text>) : undefined} />
         ))}
         <ReferenceLine x={now} stroke="var(--ink-2)" strokeWidth={1.5} label={{ value: "Now", position: "top", fill: "var(--ink)", fontSize: 11, fontWeight: 600 }} />
         <Area dataKey="band" stroke="none" fill="var(--s2)" fillOpacity={0.18} isAnimationActive={false} connectNulls name="90% interval" />

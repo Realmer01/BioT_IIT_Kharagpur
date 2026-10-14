@@ -79,6 +79,14 @@ function HorizonCard({ reg, cond }: { reg: Any; cond?: Any }) {
   ];
   const rows = H.map((h) => ({ h: Number(h), ...Object.fromEntries(series.map((s) => [s.name, reg[s.name][h].rmse])) }));
   const all = Object.keys(reg);
+  // vertical pixel offsets so end labels never collide
+  const dy: Record<string, number> = {};
+  [...series].sort((a, b) => reg[b.name]["120"].rmse - reg[a.name]["120"].rmse).reduce((prev, s) => {
+    const v = reg[s.name]["120"].rmse;
+    const off = prev && prev.v - v < 2 ? prev.off + 12 : 0;
+    dy[s.name] = off;
+    return { v, off };
+  }, null as null | { v: number; off: number });
   return (
     <Card title="Forecast error by horizon" subtitle="RMSE on unseen patients (lower is better). Table lists every model.">
       <ResponsiveContainer width="100%" height={230}>
@@ -88,7 +96,7 @@ function HorizonCard({ reg, cond }: { reg: Any; cond?: Any }) {
           <YAxis domain={[0, "auto"]} stroke="var(--axis)" tickLine={false} width={44} unit="" />
           {series.map((s) => (
             <Line key={s.name} dataKey={s.name} stroke={s.color} strokeWidth={s.w} dot={{ r: 4, fill: s.color, stroke: "var(--card)", strokeWidth: 2 }} isAnimationActive={false}>
-              <LabelList dataKey={s.name} content={(p: Any) => p.index === 3 ? <text x={p.x + 8} y={p.y + 4} fontSize={11} fill="var(--ink-2)">{Number(p.value).toFixed(1)}</text> : null} />
+              <LabelList dataKey={s.name} content={(p: Any) => p.index === 3 ? <text x={p.x + 8} y={p.y + 4 + dy[s.name]} fontSize={11} fill={s.color === "var(--muted)" ? "var(--ink-2)" : s.color}>{Number(p.value).toFixed(1)}</text> : null} />
             </Line>
           ))}
           <Tooltip formatter={(v: number) => `${v.toFixed(1)} mg/dL`} labelFormatter={(l) => `+${l} min`} contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
@@ -149,12 +157,12 @@ function ClarkeCard({ pts, reg }: { pts: number[][]; reg: Any }) {
   return (
     <Card title="Clarke error grid: 2-hour forecasts" subtitle={`Random sample of ${data.length.toLocaleString()} forecasts from unseen patients · zone A ${reg.clarke_a.toFixed(1)} %, A+B ${reg.clarke_ab.toFixed(1)} %`}>
       <ResponsiveContainer width="100%" height={320}>
-        <ScatterChart margin={{ top: 8, right: 16, bottom: 14, left: -6 }}>
+        <ScatterChart margin={{ top: 8, right: 16, bottom: 14, left: 0 }}>
           <CartesianGrid stroke="var(--grid)" />
           <XAxis type="number" dataKey="x" domain={[0, 400]} ticks={[0, 70, 180, 250, 400]} stroke="var(--axis)" tickLine={false}
             label={{ value: "Actual glucose (mg/dL)", position: "insideBottom", offset: -8, fontSize: 11, fill: "var(--muted)" }} />
-          <YAxis type="number" dataKey="y" domain={[0, 400]} ticks={[0, 70, 180, 250, 400]} stroke="var(--axis)" tickLine={false} width={48}
-            label={{ value: "Predicted", angle: -90, position: "insideLeft", offset: 18, fontSize: 11, fill: "var(--muted)" }} />
+          <YAxis type="number" dataKey="y" domain={[0, 400]} ticks={[0, 70, 180, 250, 400]} stroke="var(--axis)" tickLine={false} width={64}
+            label={{ value: "Predicted 2 h ahead", angle: -90, position: "insideLeft", offset: 2, fontSize: 11, fill: "var(--muted)", style: { textAnchor: "middle" } }} />
           <ZAxis range={[10, 10]} />
           {CLARKE.map(([x1, y1, x2, y2], i) => <ReferenceLine key={i} segment={[{ x: x1, y: y1 }, { x: x2, y: y2 }]} stroke="var(--ink-2)" strokeWidth={1} ifOverflow="hidden" />)}
           <ReferenceLine segment={[{ x: 0, y: 0 }, { x: 400, y: 400 }]} stroke="var(--axis)" strokeDasharray="3 3" />
@@ -211,10 +219,10 @@ function MealCard({ m, pts }: { m: Any; pts: number[][] }) {
     <Card title="Personal meal-response prediction" subtitle={`Peak glucose rise within 2 h of ${m.meal_ppgr.n_meals_test} unseen meals (cf. Zeevi et al., Cell 2015)`}>
       <div className="grid gap-3 md:grid-cols-2">
         <ResponsiveContainer width="100%" height={220}>
-          <ScatterChart margin={{ top: 8, right: 8, bottom: 14, left: -12 }}>
+          <ScatterChart margin={{ top: 8, right: 8, bottom: 14, left: 0 }}>
             <CartesianGrid stroke="var(--grid)" />
             <XAxis type="number" dataKey="x" stroke="var(--axis)" tickLine={false} label={{ value: "Actual rise", position: "insideBottom", offset: -8, fontSize: 11, fill: "var(--muted)" }} />
-            <YAxis type="number" dataKey="y" stroke="var(--axis)" tickLine={false} width={44} label={{ value: "Predicted", angle: -90, position: "insideLeft", offset: 20, fontSize: 11, fill: "var(--muted)" }} />
+            <YAxis type="number" dataKey="y" stroke="var(--axis)" tickLine={false} width={56} label={{ value: "Predicted", angle: -90, position: "insideLeft", offset: 2, fontSize: 11, fill: "var(--muted)", style: { textAnchor: "middle" } }} />
             <ZAxis range={[14, 14]} />
             <Scatter data={sc} fill="var(--s1)" fillOpacity={0.45} isAnimationActive={false} />
           </ScatterChart>
@@ -228,7 +236,7 @@ function MealCard({ m, pts }: { m: Any; pts: number[][] }) {
               <ReferenceLine x={0} stroke="var(--axis)" />
               <Bar dataKey="v" radius={4} isAnimationActive={false}>
                 {rows.map((r) => <Cell key={r.s} fill={r.s === MAIN ? "var(--s1)" : "var(--axis)"} />)}
-                <LabelList dataKey="v" position="right" formatter={(v: number) => v.toFixed(2)} style={{ fontSize: 11, fill: "var(--ink)" }} />
+                <LabelList dataKey="v" content={(p: Any) => <text x={Math.max(p.x, p.x + p.width) + 6} y={p.y + p.height / 2 + 4} fontSize={11} fill="var(--ink)">{Number(p.value).toFixed(2)}</text>} />
               </Bar>
             </BarChart>
           </ResponsiveContainer>

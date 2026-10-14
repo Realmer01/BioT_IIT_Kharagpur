@@ -30,14 +30,15 @@ export default function WearableStrips({ tl }: { tl: Timeline }) {
       <ResponsiveContainer width="100%" height={h}>{child}</ResponsiveContainer>
     </div>
   );
-  const margin = { top: 2, right: 12, bottom: 0, left: -12 };
+  const margin = { top: 2, right: 30, bottom: 0, left: -12 };
   return (
     <div className="space-y-1.5">
       {strip("Heart rate (bpm)",
         <ComposedChart data={rows} margin={margin}>
           <CartesianGrid stroke="var(--grid)" vertical={false} />
           {axis(false)}
-          <YAxis domain={["dataMin - 5", "dataMax + 5"]} stroke="var(--axis)" tickLine={false} width={48} tickCount={3} allowDecimals={false} />
+          <YAxis domain={[(v: number) => Math.floor((v - 5) / 10) * 10, (v: number) => Math.ceil((v + 5) / 10) * 10]} stroke="var(--axis)"
+            tickLine={false} width={48} tickCount={3} allowDecimals={false} tickFormatter={(v) => String(Math.round(v))} />
           <ReferenceLine x={now} stroke="var(--ink-2)" />
           <Line dataKey="hr" stroke="var(--s3)" strokeWidth={1.5} dot={false} isAnimationActive={false} />
           <Tooltip content={<Tip unit="bpm" k="hr" />} />
@@ -55,7 +56,8 @@ export default function WearableStrips({ tl }: { tl: Timeline }) {
         <ComposedChart data={rows} margin={margin}>
           <CartesianGrid stroke="var(--grid)" vertical={false} />
           {axis(true)}
-          <YAxis domain={[0, 3]} ticks={[0, 1, 2, 3]} tickFormatter={(v) => SLEEP_NAME[v]} stroke="var(--axis)" tickLine={false} width={48} />
+          <YAxis domain={[0, 3]} ticks={[0, 1, 2, 3]} interval={0} tickFormatter={(v) => SLEEP_NAME[v]} stroke="var(--axis)" tickLine={false} width={48}
+            tick={{ fontSize: 10, fill: "var(--muted)" }} />
           <ReferenceLine x={now} stroke="var(--ink-2)" />
           <Line type="stepAfter" dataKey="sleep" stroke="var(--brand)" strokeWidth={1.5} dot={false} isAnimationActive={false} connectNulls={false} />
           <Tooltip content={<Tip k="sleep" />} />

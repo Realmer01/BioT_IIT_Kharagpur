@@ -75,10 +75,11 @@ export default function RecordTab({ p }: { p: Patient }) {
       <div className="space-y-4">
         <Card title="HbA1c history" subtitle="Quarterly results; dashed line = 7 % individualised target">
           <ResponsiveContainer width="100%" height={170}>
-            <LineChart data={hist} margin={{ top: 8, right: 12, bottom: 0, left: -18 }}>
+            <LineChart data={hist} margin={{ top: 8, right: 12, bottom: 0, left: -6 }}>
               <CartesianGrid stroke="var(--grid)" vertical={false} />
               <XAxis dataKey="d" tickFormatter={(d) => d.slice(2, 7)} stroke="var(--axis)" tickLine={false} />
-              <YAxis domain={[(m: number) => Math.floor(m - 0.5), (m: number) => Math.ceil(m + 0.5)]} stroke="var(--axis)" tickLine={false} width={44} />
+              <YAxis domain={[(m: number) => Math.floor(m - 0.5), (m: number) => Math.ceil(m + 0.5)]} stroke="var(--axis)" tickLine={false} width={40}
+                allowDecimals={false} tickFormatter={(v) => `${v}%`} />
               <ReferenceLine y={7} stroke="var(--axis)" strokeDasharray="4 3" />
               <Line dataKey="v" stroke="var(--s1)" strokeWidth={2} dot={{ r: 4, fill: "var(--s1)", stroke: "var(--card)", strokeWidth: 2 }} isAnimationActive={false} />
               <Tooltip content={({ active, payload }) => active && payload?.length ? <div className="card px-2 py-1 text-xs">{payload[0].payload.d}: <b>{payload[0].payload.v}%</b></div> : null} />

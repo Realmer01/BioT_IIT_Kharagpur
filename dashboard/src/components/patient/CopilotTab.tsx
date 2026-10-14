@@ -23,7 +23,7 @@ export default function CopilotTab({ p }: { p: Patient }) {
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
       <Card title={<span className="inline-flex items-center gap-1.5"><MessageSquareText size={15} />Clinical copilot</span>}
         subtitle="A grounded narrative of the twin's state for the treating doctor"
-        right={resp && <Badge tone="brand">{resp.engine === "llm" ? `Claude · ${resp.model}` : "Rule engine (offline)"}</Badge>}>
+        right={resp && <Badge tone="brand">{resp.engine === "llm" ? `Language-model engine · ${resp.model}` : "Rule engine (offline)"}</Badge>}>
         <div className={busy ? "refetching" : ""}>
           {resp ? <div className="markdown text-sm leading-relaxed"><ReactMarkdown>{resp.text}</ReactMarkdown></div> : <div className="h-60" />}
           {resp?.note && <p className="mt-2 text-xs text-muted">{resp.note}</p>}
@@ -43,7 +43,7 @@ export default function CopilotTab({ p }: { p: Patient }) {
           <li>Never gives dosing instructions; medication points are framed for clinician review.</li>
           <li>Quotes forecast intervals, and labels simulation output as model estimates.</li>
           <li>Works offline: without an API key a deterministic rule engine writes the summary, so the clinic never loses the feature.</li>
-          <li>LLM mode (optional): Claude via the Anthropic API, with server-side refusal fallback; set <code>ANTHROPIC_API_KEY</code> on the server.</li>
+          <li>Optional hosted language-model engine (Anthropic API) with automatic fallback; enable it by setting <code>ANTHROPIC_API_KEY</code> on the server.</li>
         </ul>
         <p className="mt-3 text-[11px] text-muted">{resp?.llm_available ? "LLM engine configured." : "LLM engine not configured: using the rule engine."}</p>
       </Card>

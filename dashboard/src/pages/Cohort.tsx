@@ -85,16 +85,16 @@ export default function Cohort() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[980px] text-sm">
             <thead>
-              <tr className="border-y bg-page/60 text-left text-xs text-muted">
+              <tr className="whitespace-nowrap border-y bg-page/60 text-left text-xs text-muted">
                 <th className="px-4 py-2 font-medium">Status</th>
                 <th className="px-2 py-2 font-medium">Patient</th>
                 <th className="px-2 py-2 font-medium">Condition</th>
-                <th className="px-2 py-2 text-right font-medium">Glucose now</th>
-                <th className="px-2 py-2 text-right font-medium">In 60 min</th>
+                <th className="px-2 py-2 text-right font-medium">Glucose</th>
+                <th className="px-2 py-2 text-right font-medium">60 min*</th>
                 <th className="px-2 py-2 font-medium">Risk &gt;180 (2 h)</th>
                 <th className="px-2 py-2 font-medium">Risk &lt;70 (1 h)</th>
-                <th className="px-2 py-2 text-right font-medium">TIR 7 d</th>
-                <th className="px-2 py-2 text-right font-medium">TBR 7 d</th>
+                <th className="px-2 py-2 text-right font-medium">TIR 7d</th>
+                <th className="px-2 py-2 text-right font-medium">TBR 7d</th>
                 <th className="px-4 py-2 text-right font-medium">Alerts 24 h</th>
               </tr>
             </thead>
@@ -103,6 +103,7 @@ export default function Cohort() {
             </tbody>
           </table>
         </div>
+        <p className="px-4 pb-1 pt-2 text-[11px] text-muted">* forecast if no new food is eaten. Alerts are counted as episodes (a new alert needs 60 min without one).</p>
       </Card>
     </div>
   );

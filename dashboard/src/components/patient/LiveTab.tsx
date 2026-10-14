@@ -13,7 +13,7 @@ export default function LiveTab({ p }: { p: Patient }) {
   const { minute } = useClock();
   const [hours, setHours] = useState(24);
   const [showFuture, setShowFuture] = useState(false);
-  const [showTrack, setShowTrack] = useState(true);
+  const [showTrack, setShowTrack] = useState(false);
   const [showTwin, setShowTwin] = useState(false);
   const tl = useFetch<Timeline>(`/api/patients/${p.patient_id}/timeline?minute=${minute}&hours=${hours}`);
   const rk = useFetch<Risk>(`/api/patients/${p.patient_id}/risk?minute=${minute}`);
@@ -85,7 +85,10 @@ export default function LiveTab({ p }: { p: Patient }) {
               <div className="mt-3 space-y-2">
                 <RiskMeter label="Hyperglycaemia >180 within 2 h" p={r.probabilities.hyper_2h} color="var(--serious)" />
                 <RiskMeter label="Hypoglycaemia <70 within 1 h" p={r.probabilities.hypo_1h} color="var(--critical)" />
-                <RiskMeter label="Spike +50 mg/dL within 2 h" p={r.probabilities.spike_2h} color="var(--warning)" />
+                {((r.context.gut_carbs ?? 0) >= 10 || (r.context.minutes_since_meal ?? 999) <= 60) && (
+                  <RiskMeter label="Post-meal spike +50 mg/dL within 2 h" p={r.probabilities.spike_2h} color="var(--warning)" />
+                )}
+                <p className="text-[10px] leading-snug text-muted">Risks include the patient's usual eating pattern; the forecast above assumes no new food.</p>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-ink2">
                 <div className="flex items-center gap-1.5"><Utensils size={13} /> {r.context.minutes_since_meal != null && r.context.minutes_since_meal < 700 ? `${Math.round(r.context.minutes_since_meal)} min since meal` : "No recent meal"}</div>
