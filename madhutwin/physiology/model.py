@@ -218,8 +218,13 @@ def observe(p, cgm, in_f, in_s, u_ex, si_mult, egp_mult, hour0, gain, gain_d):
 
 
 @njit(cache=True, parallel=True)
-def forecast_from(p, states, cgm_last, starts, horizon, si_mult, egp_mult, hour0):
-    """Open-loop forecasts from many start minutes (future meals/activity unknown).
+def forecast_from(p, states, cgm_last, starts, horizon, si_mult, egp_mult, hour0, u_ex, persist):
+    """Open-loop forecasts from many start minutes (future meals unknown).
+
+    Activity-persistence prior: if the patient is exercising at the start
+    (mean METs over the last 10 min above 2.5), the current intensity is
+    assumed to continue and taper linearly to rest over ``persist`` minutes;
+    otherwise the patient is assumed to be at rest. ``persist=0`` disables it.
 
     Returns glucose trajectories, shape (len(starts), horizon + 1), minute resolution.
     ``cgm_last`` is the most recent sensor value at each start (anchors G).
@@ -233,8 +238,19 @@ def forecast_from(p, states, cgm_last, starts, horizon, si_mult, egp_mult, hour0
         out[j, 0] = x[0]
         sm = si_mult[s]
         em = egp_mult[s]
+        u0 = 0.0
+        if persist > 0:
+            lo = max(0, s - 9)
+            for t in range(lo, s + 1):
+                u0 += u_ex[t]
+            u0 /= s + 1 - lo
+            if u0 < 1.0:
+                u0 = 0.0
         for k in range(horizon):
-            _step(x, p, 0.0, 0.0, 0.0, sm, em, hour0 + (s + 1 + k) / 60.0)
+            uk = 0.0
+            if u0 > 0.0 and k < persist:
+                uk = u0 * (1.0 - k / persist)
+            _step(x, p, 0.0, 0.0, uk, sm, em, hour0 + (s + 1 + k) / 60.0)
             out[j, k + 1] = x[0]
     return out
 

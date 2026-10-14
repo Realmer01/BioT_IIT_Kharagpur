@@ -118,8 +118,9 @@ class DigitalTwin:
 
     def forecast(self, arrays: dict, states: np.ndarray, starts: np.ndarray, cgm_last: np.ndarray,
                  horizon: int = 120) -> np.ndarray:
+        from madhutwin.physiology import calibrate as _cal
         return M.forecast_from(self.params, states, cgm_last.astype(float), starts.astype(np.int64), horizon,
-                               arrays["si"], arrays["egp"], arrays["hour0"])
+                               arrays["si"], arrays["egp"], arrays["hour0"], arrays["u_ex"], _cal.ACT_PERSIST)
 
     def what_if(self, state: np.ndarray, hour: float, scenarios: list[dict], horizon: int = 240) -> np.ndarray:
         """Simulate several futures from the same synchronised state.

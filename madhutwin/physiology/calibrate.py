@@ -31,6 +31,9 @@ OBS_GAIN = 1.0
 # benefit (the ML residual layer captures unexplained trends better), so it is off by
 # default; the state is kept for what-if "unexplained input" scenarios.
 OBS_GAIN_D = 0.0
+# Activity-persistence prior for twin forecasts (minutes). Validated on CGMacros and the
+# Bharat cohort: no accuracy gain (slightly worse beyond 30 min), so it is disabled.
+ACT_PERSIST = 0
 FIT_HORIZONS = np.array([30, 60, 90, 120])
 SIGMA_CGM = 20.0  # mg/dL, residual scale for the likelihood
 
@@ -117,7 +120,7 @@ def twin_forecast_rmse(p, arrays, starts, targets) -> dict:
     states = M.observe(p, arrays["cgm"], arrays["in_f"], arrays["in_s"], arrays["u_ex"],
                        arrays["si"], arrays["egp"], arrays["hour0"], OBS_GAIN, OBS_GAIN_D)
     fc = M.forecast_from(p, states, arrays["cgm"][starts], starts, int(FIT_HORIZONS.max()),
-                         arrays["si"], arrays["egp"], arrays["hour0"])
+                         arrays["si"], arrays["egp"], arrays["hour0"], arrays["u_ex"], ACT_PERSIST)
     pred = fc[:, FIT_HORIZONS]
     err = pred - targets
     return {int(h): float(np.sqrt(np.nanmean(err[:, i] ** 2))) for i, h in enumerate(FIT_HORIZONS)}
@@ -151,7 +154,8 @@ def calibrate(arrays: dict, ehr: dict, base_params: np.ndarray | None = None,
         p = _unpack(z, base)
         states = M.observe(p, cgm, arrays["in_f"], arrays["in_s"], arrays["u_ex"],
                            arrays["si"], arrays["egp"], arrays["hour0"], OBS_GAIN, OBS_GAIN_D)
-        fc = M.forecast_from(p, states, cgm[starts], starts, hz, arrays["si"], arrays["egp"], arrays["hour0"])
+        fc = M.forecast_from(p, states, cgm[starts], starts, hz, arrays["si"], arrays["egp"], arrays["hour0"],
+                             arrays["u_ex"], ACT_PERSIST)
         err = (fc[:, FIT_HORIZONS] - targets)[valid]
         nll = 0.5 * n_eff * np.mean((err / SIGMA_CGM) ** 2)
         prior = 0.5 * prior_weight * np.sum(((z - z0) / zsd) ** 2)
