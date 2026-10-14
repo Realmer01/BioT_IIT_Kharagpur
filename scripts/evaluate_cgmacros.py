@@ -48,6 +48,7 @@ def feature_sets(cols):
 
 
 REG_SETS = ["CGM only", "CGM + EHR", "Wearable streams", "Fusion (streams + EHR)", "MadhuTwin hybrid"]
+COND_SETS = ["Fusion (streams + EHR)", "MadhuTwin hybrid"]
 CLF_SETS = ["EHR only", "CGM only", "Wearable streams", "Fusion (streams + EHR)", "MadhuTwin hybrid"]
 
 
@@ -114,14 +115,19 @@ def main():
             for name in REG_SETS:
                 m = fit_regressor(tr[FS[name]], dy)
                 te[f"{name}|{h}"] = g0_te + m.predict(te[FS[name]])
+            # conditional ("if no new food") forecasters: trained on windows without a logged meal
+            dyc = np.where(tr["next_meal_min"].to_numpy() > h, dy, np.nan)
+            for name in COND_SETS:
+                m = fit_regressor(tr[FS[name]], dyc)
+                te[f"{name} [conditional]|{h}"] = g0_te + m.predict(te[FS[name]])
             # conformalised quantile regression for the hybrid model
             rng = np.random.default_rng(RANDOM_SEED + k)
             tr_pids = np.array(sorted(tr_p))
             cal = set(rng.choice(tr_pids, size=len(tr_pids) // 4, replace=False))
             is_cal = tr["patient_id"].isin(cal).to_numpy()
             Xh = tr[FS["MadhuTwin hybrid"]]
-            q = fit_quantiles(Xh[~is_cal], dy[~is_cal])
-            off = cqr_offset(q, Xh[is_cal], dy[is_cal])
+            q = fit_quantiles(Xh[~is_cal], dyc[~is_cal])  # deployed intervals are conditional
+            off = cqr_offset(q, Xh[is_cal], dyc[is_cal])
             qp = q.predict(te[FS["MadhuTwin hybrid"]])
             te[f"lo|{h}"] = g0_te + qp[:, 0] - off
             te[f"hi|{h}"] = g0_te + qp[:, 1] + off
@@ -148,10 +154,21 @@ def main():
             grp: {h: MT.regression_report(sub[f"y_{h}"].to_numpy(), sub[f"{name}|{h}"].to_numpy()) for h in HORIZONS}
             for grp, sub in oof.groupby("group")}
 
-    # ------------------------------------------------------------------ intervals
+    # ------------------------------------------------------------------ conditional forecasts (meal-free windows)
+    results["regression_conditional"] = {}
+    cond_models = ["Persistence", "Twin only (physiology)", "Fusion (streams + EHR)", "MadhuTwin hybrid"]
+    cond_models += [f"{n} [conditional]" for n in COND_SETS]
+    for name in cond_models:
+        results["regression_conditional"][name] = {}
+        for h in HORIZONS:
+            free = oof["next_meal_min"].to_numpy() > h
+            results["regression_conditional"][name][h] = MT.regression_report(
+                oof[f"y_{h}"].to_numpy()[free], oof[f"{name}|{h}"].to_numpy()[free])
+
+    # ------------------------------------------------------------------ intervals (conditional, as deployed)
     results["intervals"] = {}
     for h in HORIZONS:
-        y = oof[f"y_{h}"].to_numpy()
+        y = np.where(oof["next_meal_min"].to_numpy() > h, oof[f"y_{h}"].to_numpy(), np.nan)
         ok = np.isfinite(y)
         lo, hi = oof[f"lo|{h}"].to_numpy()[ok], oof[f"hi|{h}"].to_numpy()[ok]
         results["intervals"][h] = {"nominal": 1 - ALPHA, "coverage": float(np.mean((y[ok] >= lo) & (y[ok] <= hi))),
@@ -212,7 +229,7 @@ def main():
     }
     with open(REPORTS / "metrics_cgmacros.json", "w") as f:
         json.dump(results, f, indent=2, default=float)
-    keep = ["patient_id", "group", "minute", "time", "g0", "fold", "meal_min_since"] + \
+    keep = ["patient_id", "group", "minute", "time", "g0", "fold", "meal_min_since", "next_meal_min"] + \
            [c for c in oof.columns if "|" in c or c.startswith(("y_", "ev_"))]
     oof[keep].to_parquet(REPORTS / "oof_cgmacros.parquet", index=False)
     meals.to_parquet(REPORTS / "meals_cgmacros.parquet", index=False)
@@ -221,6 +238,8 @@ def main():
     print("\nRMSE (mg/dL) on unseen patients, monitor period")
     tab = pd.DataFrame({n: {h: results["regression"][n][h]["rmse"] for h in HORIZONS} for n in reg_models}).T
     print(tab.round(1).to_string())
+    print("\nCONDITIONAL RMSE on meal-free windows")
+    print(pd.DataFrame({n: {h: results["regression_conditional"][n][h]["rmse"] for h in HORIZONS} for n in cond_models}).T.round(1).to_string())
     print("\nHyperglycaemia onset (>180 within 2h) AUROC / AUPRC")
     for n in CLF_SETS:
         r = results["events"]["ev_hyper"][n]

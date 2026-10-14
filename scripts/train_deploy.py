@@ -61,6 +61,7 @@ def main():
         # ablation comparators on the same rows (monitor period only, evaluated below)
         for h in HORIZONS:
             dy = tr[f"y_{h}"].to_numpy() - tr["g0"].to_numpy()
+            dy = np.where(tr["next_meal_min"].to_numpy() > h, dy, np.nan)  # conditional, like the deployed model
             m = fit_regressor(tr[no_twin], dy)
             te[f"notwin_{h}"] = te["g0"].to_numpy() + m.predict(te[no_twin])
         for ev in ("ev_hyper", "ev_hypo"):
@@ -75,12 +76,15 @@ def main():
     P = pd.concat(preds, ignore_index=True)
 
     ev = P[P["phase"].eq("monitor")]
-    res = {"note": "SYNTHETIC Bharat cohort, held-out patients, monitor period", "regression": {}, "events": {}, "episodes": {}}
+    res = {"note": "SYNTHETIC Bharat cohort, held-out patients, monitor period; forecasts are conditional "
+                   "('if no new food') and scored on windows without a logged meal",
+           "regression": {}, "events": {}, "episodes": {}}
     for name, col in (("Persistence", None), ("Fusion (no twin)", "notwin_{h}"), ("MadhuTwin hybrid", "pred_{h}")):
-        res["regression"][name] = {
-            h: MT.regression_report(ev[f"y_{h}"].to_numpy(),
-                                    ev["g0"].to_numpy() if col is None else ev[col.format(h=h)].to_numpy())
-            for h in HORIZONS}
+        res["regression"][name] = {}
+        for h in HORIZONS:
+            free = ev["next_meal_min"].to_numpy() > h
+            p = ev["g0"].to_numpy() if col is None else ev[col.format(h=h)].to_numpy()
+            res["regression"][name][h] = MT.regression_report(ev[f"y_{h}"].to_numpy()[free], p[free])
     for e in ("ev_hyper", "ev_spike", "ev_hypo"):
         res["events"][e] = {"MadhuTwin hybrid": MT.classification_report(ev[e].to_numpy(), ev[f"p_{e}"].to_numpy())}
         if f"notwin_p_{e}" in ev:
@@ -95,9 +99,12 @@ def main():
         "MadhuTwin hybrid": MT.episode_lead_times(hyp_eval, "p_ev_hypo", level=-70.0, window=60, min_lead=10),
         "Fusion (no twin)": MT.episode_lead_times(hyp_eval, "notwin_p_ev_hypo", level=-70.0, window=60, min_lead=10),
     }
+    res["episodes_hypo_by_threshold"] = {str(t): MT.episode_lead_times(hyp_eval, "p_ev_hypo", thr=t, level=-70.0, window=60, min_lead=10)
+                                         for t in (0.25, 0.5)}
+    res["hypo_alert_threshold_dashboard"] = 0.25
     res["intervals"] = {}
     for h in HORIZONS:
-        y = ev[f"y_{h}"].to_numpy()
+        y = np.where(ev["next_meal_min"].to_numpy() > h, ev[f"y_{h}"].to_numpy(), np.nan)
         ok = np.isfinite(y)
         res["intervals"][h] = {"coverage": float(np.mean((y[ok] >= ev[f"lo_{h}"].to_numpy()[ok]) & (y[ok] <= ev[f"hi_{h}"].to_numpy()[ok]))),
                                "mean_width": float(np.mean(ev[f"hi_{h}"].to_numpy()[ok] - ev[f"lo_{h}"].to_numpy()[ok]))}
@@ -108,7 +115,7 @@ def main():
         json.dump(res, f, indent=2, default=float)
     with open(MODELS / "assignments.json", "w") as f:
         json.dump({"features": feats, "patient_fold": assign}, f, indent=1)
-    keep = ["patient_id", "minute", "time", "g0", "phase"] + [c for c in P.columns if c.startswith(
+    keep = ["patient_id", "minute", "time", "g0", "phase", "next_meal_min"] + [c for c in P.columns if c.startswith(
         ("pred_", "lo_", "hi_", "p_ev_", "y_", "ev_"))]
     P[keep].to_parquet(PROCESSED / "bharat_predictions.parquet", index=False)
 

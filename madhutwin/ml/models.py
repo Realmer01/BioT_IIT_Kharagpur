@@ -2,7 +2,10 @@
 
 * Point forecasts: one XGBoost regressor per horizon predicting the glucose
   change from now (the twin's own forecast is an input feature, so the model
-  learns *where and how much to trust physiology*).
+  learns *where and how much to trust physiology*). Deployed forecasts are
+  *conditional*: trained on windows with no logged meal inside the horizon, so
+  they answer "where is glucose heading if no new food is eaten" - consistent
+  with the twin, which adds any new meal mechanistically (what-if).
 * Uncertainty: Conformalised Quantile Regression (Romano et al., 2019) gives
   distribution-free 90 % prediction intervals with a coverage guarantee on
   exchangeable patients.
@@ -68,9 +71,10 @@ class HybridForecaster:
     clf: dict = field(default_factory=dict)
     meta: dict = field(default_factory=dict)
 
-    def fit(self, df: pd.DataFrame, cal_patients: set | None = None, events: tuple = EVENTS):
+    def fit(self, df: pd.DataFrame, cal_patients: set | None = None, events: tuple = EVENTS, conditional: bool = True):
         X = df[self.features]
         g0 = df["g0"].to_numpy()
+        self.meta["conditional"] = conditional
         if cal_patients is None:
             pids = np.array(sorted(df["patient_id"].unique()))
             rng = np.random.default_rng(RANDOM_SEED)
@@ -78,6 +82,8 @@ class HybridForecaster:
         is_cal = df["patient_id"].isin(cal_patients).to_numpy()
         for h in HORIZONS:
             dy = df[f"y_{h}"].to_numpy() - g0
+            if conditional:
+                dy = np.where(df["next_meal_min"].to_numpy() > h, dy, np.nan)
             self.point[h] = fit_regressor(X, dy)
             self.quant[h] = fit_quantiles(X[~is_cal], dy[~is_cal])
             self.offset[h] = cqr_offset(self.quant[h], X[is_cal], dy[is_cal])

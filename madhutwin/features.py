@@ -103,6 +103,11 @@ def build_features(minute: pd.DataFrame, meals: pd.DataFrame, ehr: dict, arrays:
         np.add.at(prot, mm[ok], meals["protein"].to_numpy(float)[ok])
     is_meal = (carbs + fat + prot) > 0
     F["meal_min_since"] = _since_last(is_meal, 720.0)
+    # minutes until the next logged meal: used ONLY to train/evaluate the conditional
+    # ("if no new food") forecaster; it is not a model input (no stream prefix)
+    nxt = np.where(is_meal, np.arange(n), np.nan)
+    nxt = pd.Series(nxt).shift(-1).bfill().to_numpy()
+    next_meal_min = np.where(np.isnan(nxt), 720.0, np.minimum(nxt - np.arange(n), 720.0))
     for name, arr in (("carbs", carbs), ("fat", fat), ("fiber", fiber), ("protein", prot), ("kcal", kcal)):
         s = pd.Series(arr)
         F[f"meal_{name}_60"] = s.rolling(60, min_periods=1).sum().to_numpy()
@@ -155,6 +160,7 @@ def build_features(minute: pd.DataFrame, meals: pd.DataFrame, ehr: dict, arrays:
             v = np.nan if v is None else float(v)
         df[f"ehr_{k}"] = v
 
+    df["next_meal_min"] = next_meal_min[rows]
     df.insert(0, "minute", rows)
     df.insert(1, "time", t.iloc[rows].to_numpy())
     df.insert(2, "g0", native[rows])
