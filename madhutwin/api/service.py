@@ -44,6 +44,17 @@ def _iso(t) -> str:
     return pd.Timestamp(t).isoformat()
 
 
+def _episodes(minutes: np.ndarray, active: np.ndarray, gap: int = 60) -> int:
+    """Count alert episodes: an alert is new only after `gap` minutes without one."""
+    n, last = 0, -10 ** 9
+    for m, a in zip(minutes, active):
+        if a:
+            if m - last > gap:
+                n += 1
+            last = m
+    return n
+
+
 def _clean(x):
     """JSON-safe floats."""
     if isinstance(x, dict):
@@ -132,9 +143,7 @@ class TwinService:
                 first = int(pw["minute"].iloc[0]) if len(pw) else onset - 30
                 return first - 15
             return day * 1440 + 14 * 60
-        if story == "dawn":
-            return 9 * 1440 + int(3.5 * 60)
-        day = {"wedding_feast": 8, "late_dinner_short_sleep": 4}.get(story)
+        day = {"wedding_feast": 8, "late_dinner_short_sleep": 4, "dawn": 9}.get(story)
         if day is not None:
             cand = [m for m in lunches if m // 1440 == day]
             if cand:
@@ -157,8 +166,7 @@ class TwinService:
             cg = mn["cgm"].to_numpy()[max(0, minute - 7 * 1440):minute + 1]
             s7 = AGP.glycaemic_summary(mn["time"].iloc[max(0, minute - 7 * 1440):minute + 1], cg)
             win = P[(P["minute"] > minute - 1440) & (P["minute"] <= minute)]
-            alerts24 = int(((win["p_ev_hyper"] >= HYPER_THR) & ~(win["p_ev_hyper"].shift(1) >= HYPER_THR)).sum()
-                           + ((win["p_ev_hypo"] >= HYPO_THR) & ~(win["p_ev_hypo"].shift(1) >= HYPO_THR)).sum())
+            alerts24 = _episodes(win["minute"].to_numpy(), (win["p_ev_hyper"] >= HYPER_THR).to_numpy()) +                 _episodes(win["minute"].to_numpy(), (win["p_ev_hypo"] >= HYPO_THR).to_numpy())
             p_hypo, p_hyper = float(r["p_ev_hypo"]), float(r["p_ev_hyper"])
             g0 = float(r["g0"])
             status = "urgent" if (p_hypo >= HYPO_THR and g0 < 120) or g0 < 70 else "warning" if (p_hyper >= HYPER_THR or g0 > 250) else \

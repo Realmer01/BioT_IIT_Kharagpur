@@ -100,7 +100,7 @@ PERSONAS = [
          headline="Prediabetes: late dinners and 5-h deadline nights -> next-day insulin resistance"),
     dict(pid="BH-0004", first="Gurpreet", last="Singh", sex="M", age=66, region="N", city=("Chandigarh", "Punjab", "Punjabi"),
          occupation="Retired", status="t2d", dm_years=18, rx=[("Metformin", 2000), ("Dapagliflozin", 10), ("Insulin glargine", 18)],
-         story="dawn", headline="Long-standing T2D on basal insulin: marked dawn phenomenon, fasting highs"),
+         story="dawn", headline="Long-standing T2D on basal insulin + SGLT2i: fasting glucose controlled, large post-meal excursions"),
     dict(pid="BH-0005", first="Fatima", last="Sheikh", sex="F", age=49, region="S", city=("Hyderabad", "Telangana", "Telugu"),
          occupation="School teacher", status="t2d", dm_years=5, bmi=24.6, phys=dict(Gb=134.0, SI=3.0e-4),
          rx=[("Metformin", 1000), ("Gliclazide", 120)],
