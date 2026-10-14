@@ -35,6 +35,12 @@ OBS_GAIN_D = 0.0
 # Bharat cohort: no accuracy gain (slightly worse beyond 30 min), so it is disabled.
 ACT_PERSIST = 0
 FIT_HORIZONS = np.array([30, 60, 90, 120])
+# Fasting steady-state consistency: the personalised twin's drug-adjusted fasting
+# equilibrium must match the patient's observed overnight glucose (or lab FPG).
+# Validated on both cohorts: slightly better forecasts from low glucose but worse at
+# 90-120 min overall, so it is disabled (weight 0). Kept for experimentation.
+SS_WEIGHT = 0.0  # weight of the constraint, in equivalent observations
+SS_SIGMA = 10.0  # mg/dL
 SIGMA_CGM = 20.0  # mg/dL, residual scale for the likelihood
 
 BOUNDS = {
@@ -73,6 +79,18 @@ def ehr_prior(ehr: dict) -> tuple[dict, dict]:
     sd = {"Gb": 0.12, "SI": 0.6, "SG": 0.35, "beta": 0.7, "k_scale": 0.35, "f": 0.3,
           "alpha_ex": 0.6, "dawn": 0.8, "circ": 0.15}
     return mean, sd
+
+
+def fasting_target(arrays: dict, ehr: dict) -> float | None:
+    """Observed fasting level: median native CGM between 03:00 and 06:00, else lab FPG."""
+    cgm = arrays["cgm"]
+    hod = (arrays["hour0"] + np.arange(len(cgm)) / 60.0) % 24.0
+    night = cgm[(hod >= 3.0) & (hod < 6.0)]
+    night = night[np.isfinite(night)]
+    if len(night) >= 24:
+        return float(np.median(night))
+    fpg = ehr.get("fpg")
+    return float(fpg) if fpg and np.isfinite(fpg) else None
 
 
 def _pack(values: dict) -> np.ndarray:
@@ -146,6 +164,7 @@ def calibrate(arrays: dict, ehr: dict, base_params: np.ndarray | None = None,
         return CalibrationResult(prior_p, prior_p, n_starts=len(starts), success=False)
 
     n_eff = max(len(starts) / 2.0, 1.0)  # overlapping forecasts are autocorrelated
+    fasting = fasting_target(arrays, ehr)
     valid = np.isfinite(targets)
     cgm = arrays["cgm"]
     hz = int(FIT_HORIZONS.max())
@@ -159,7 +178,10 @@ def calibrate(arrays: dict, ehr: dict, base_params: np.ndarray | None = None,
         err = (fc[:, FIT_HORIZONS] - targets)[valid]
         nll = 0.5 * n_eff * np.mean((err / SIGMA_CGM) ** 2)
         prior = 0.5 * prior_weight * np.sum(((z - z0) / zsd) ** 2)
-        return nll + prior
+        ss = 0.0
+        if SS_WEIGHT > 0 and fasting is not None:
+            ss = 0.5 * SS_WEIGHT * ((M.steady_state(p)[M.S_G] - fasting) / SS_SIGMA) ** 2
+        return nll + prior + ss
 
     lo = np.array([np.log(BOUNDS[k][0]) for k in _LOG] + [-3.0])
     hi = np.array([np.log(BOUNDS[k][1]) for k in _LOG] + [3.0])
