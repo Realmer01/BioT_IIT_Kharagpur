@@ -4,7 +4,7 @@ import { getJSON, type Patient } from "../../lib/api";
 import { useClock } from "../../lib/clock";
 import { Card } from "../ui";
 
-type Lab = [string, number | string | undefined, string, (v: number) => boolean];
+type Lab = [string, number | string | null | undefined, string, (v: number) => boolean];
 const flag = (bad: boolean) => (bad ? <span className="ml-1 text-[10px] font-semibold" style={{ color: "var(--critical)" }}>▲ out of range</span> : null);
 
 export default function RecordTab({ p }: { p: Patient }) {
@@ -12,7 +12,7 @@ export default function RecordTab({ p }: { p: Patient }) {
   const male = p.sex === "M";
   const labs: Lab[] = [
     ["HbA1c", p.hba1c, "% (normal <5.7)", (v) => v >= 5.7],
-    ["Fasting plasma glucose", p.fpg, "mg/dL (70–99)", (v) => v > 99],
+    ["Fasting plasma glucose", p.fpg, `mg/dL (70–99)${p.fpg_note ? `, ${p.fpg_note}` : ""}`, (v) => v > 99],
     ["Fasting insulin", p.fasting_insulin, "µU/mL (2–25)", (v) => v > 25],
     ["C-peptide", p.c_peptide, "ng/mL (0.5–2.0)", (v) => v < 0.5 || v > 2.0],
     ["HOMA-IR", p.homa_ir, "(insulin resistance >2.5)", (v) => v > 2.5],
@@ -25,7 +25,7 @@ export default function RecordTab({ p }: { p: Patient }) {
     ["Vitamin B12", p.vitamin_b12, "pg/mL (200–900)", (v) => v < 200],
     ["BMI", p.bmi, "kg/m² (Asian-Indian 18.5–22.9)", (v) => v >= 23],
     ["Waist", p.waist_cm, `cm (<${male ? 90 : 80})`, (v) => v >= (male ? 90 : 80)],
-    ["Blood pressure", `${p.sbp}/${p.dbp}`, "mmHg (<130/80)", () => p.sbp >= 130 || p.dbp >= 80],
+    ["Blood pressure", p.sbp != null && p.dbp != null ? `${p.sbp}/${p.dbp}` : null, "mmHg (<130/80)", () => (p.sbp ?? 0) >= 130 || (p.dbp ?? 0) >= 80],
   ];
   const exportFhir = async () => {
     const b = await getJSON<object>(`/api/patients/${p.patient_id}/fhir?minute=${minute}`);
@@ -41,7 +41,7 @@ export default function RecordTab({ p }: { p: Patient }) {
         <table className="w-full text-sm"><tbody>
           {p.diagnoses.map((d) => (
             <tr key={d.code} className="border-b last:border-0">
-              <td className="py-1.5">{d.display}</td>
+              <td className="py-1.5">{d.display.replace(">=", "≥")}</td>
               <td className="tnum text-xs text-muted">ICD-10 {d.code}</td>
               <td className="tnum text-xs text-muted">SNOMED {d.snomed}</td>
               <td className="tnum text-right text-xs text-ink2">{d.onset ?? ""}</td>
@@ -66,7 +66,9 @@ export default function RecordTab({ p }: { p: Patient }) {
           {labs.map(([name, v, ref, bad]) => (
             <tr key={name} className="border-b last:border-0">
               <td className="py-1.5 text-ink2">{name}</td>
-              <td className="tnum text-right font-semibold">{v}{typeof v === "number" ? flag(bad(v)) : flag(bad(0))}</td>
+              <td className="tnum text-right font-semibold">
+                {v == null ? <span className="font-normal text-muted">not recorded</span> : <>{v}{typeof v === "number" ? flag(bad(v)) : flag(bad(0))}</>}
+              </td>
               <td className="pl-3 text-xs text-muted">{ref}</td>
             </tr>
           ))}
@@ -88,10 +90,10 @@ export default function RecordTab({ p }: { p: Patient }) {
         </Card>
         <Card title="Genetic & risk markers">
           <dl className="grid grid-cols-2 gap-2 text-sm">
-            <div><dt className="text-xs text-muted">TCF7L2 rs7903146</dt><dd className="font-semibold">{p.tcf7l2_rs7903146} <span className="text-xs font-normal text-ink2">({p.tcf7l2_rs7903146 === "CC" ? "no" : p.tcf7l2_rs7903146 === "CT" ? "one" : "two"} risk allele{p.tcf7l2_rs7903146 === "TT" ? "s" : ""}; impairs insulin secretion)</span></dd></div>
-            <div><dt className="text-xs text-muted">T2D polygenic risk</dt><dd className="font-semibold">{p.prs_percentile}th percentile</dd></div>
+            <div><dt className="text-xs text-muted">TCF7L2 rs7903146</dt><dd className="font-semibold">{p.tcf7l2_rs7903146 == null ? <span className="font-normal text-muted">not tested</span> : <>{p.tcf7l2_rs7903146} <span className="text-xs font-normal text-ink2">({p.tcf7l2_rs7903146 === "CC" ? "no" : p.tcf7l2_rs7903146 === "CT" ? "one" : "two"} risk allele{p.tcf7l2_rs7903146 === "TT" ? "s" : ""}; impairs insulin secretion)</span></>}</dd></div>
+            <div><dt className="text-xs text-muted">T2D polygenic risk</dt><dd className="font-semibold">{p.prs_percentile == null ? <span className="font-normal text-muted">not tested</span> : `${p.prs_percentile}th percentile`}</dd></div>
             <div><dt className="text-xs text-muted">Family history of T2D</dt><dd className="font-semibold">{p.family_history_t2d}</dd></div>
-            <div><dt className="text-xs text-muted">Indian Diabetes Risk Score</dt><dd className="font-semibold">{p.idrs} <span className="text-xs font-normal text-ink2">{p.idrs >= 60 ? "(high risk)" : p.idrs >= 30 ? "(moderate)" : "(low)"}</span></dd></div>
+            <div><dt className="text-xs text-muted">Indian Diabetes Risk Score</dt><dd className="font-semibold">{p.idrs == null ? <span className="font-normal text-muted">not recorded</span> : <>{p.idrs} <span className="text-xs font-normal text-ink2">{p.idrs >= 60 ? "(high risk)" : p.idrs >= 30 ? "(moderate)" : "(low)"}</span></>}</dd></div>
           </dl>
         </Card>
         <Card title="Consent, privacy & interoperability"

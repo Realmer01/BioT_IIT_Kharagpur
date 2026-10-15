@@ -57,7 +57,7 @@ export default function Cohort() {
               <PlayCircle size={18} className="mt-0.5 shrink-0 text-brand" />
               <div>
                 <div className="text-sm font-semibold">{s.name} <span className="font-normal text-muted">· {fmtDateTime(s.time)}</span></div>
-                <div className="text-xs text-ink2">{s.headline}</div>
+                <div className="text-xs text-ink2">{s.headline.replace(" -> ", " → ")}</div>
               </div>
             </button>
           ))}
@@ -122,7 +122,7 @@ function Row({ p, onClick }: { p: CohortRow; onClick: () => void }) {
     <tr onClick={onClick} className="cursor-pointer border-b last:border-0 hover:bg-page/70">
       <td className="px-4 py-2"><StatusPill status={p.status} /></td>
       <td className="px-2 py-2">
-        <div className="font-medium">{p.name} {p.featured && <Badge tone="brand">story</Badge>}</div>
+        <div className="font-medium">{p.name} {p.featured && <Badge tone="brand">story</Badge>}{p.uploaded && <Badge tone="brand">uploaded</Badge>}</div>
         <div className="text-xs text-muted">{p.age}{p.sex} · {p.city} · {p.patient_id}</div>
       </td>
       <td className="px-2 py-2">

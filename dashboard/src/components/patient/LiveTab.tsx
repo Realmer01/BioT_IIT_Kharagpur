@@ -57,7 +57,7 @@ export default function LiveTab({ p }: { p: Patient }) {
         <Card title="Wearable streams" subtitle="Smartwatch data fused into the twin (same time axis as above)">
           {tl.data ? <WearableStrips tl={tl.data} /> : <div className="h-48" />}
         </Card>
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2">
           <RecCard rec={rec.data} loading={rec.loading} />
           <PhenotypeCard p={p} />
         </div>
@@ -93,7 +93,7 @@ export default function LiveTab({ p }: { p: Patient }) {
               <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-ink2">
                 <div className="flex items-center gap-1.5"><Utensils size={13} /> {r.context.minutes_since_meal != null && r.context.minutes_since_meal < 700 ? `${Math.round(r.context.minutes_since_meal)} min since meal` : "No recent meal"}</div>
                 <div className="flex items-center gap-1.5"><Info size={13} /> Gut: ~{num(r.context.gut_carbs)} g carbs</div>
-                <div className="flex items-center gap-1.5"><Moon size={13} /> Slept {num(r.context.sleep_last_h, 1)} h</div>
+                <div className="flex items-center gap-1.5"><Moon size={13} /> {r.context.sleep_last_h != null ? `Slept ${num(r.context.sleep_last_h, 1)} h` : "Sleep not recorded"}</div>
                 <div className="flex items-center gap-1.5"><Footprints size={13} /> {num(r.context.steps_today)} steps today</div>
               </div>
             </div>

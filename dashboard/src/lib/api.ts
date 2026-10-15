@@ -35,7 +35,7 @@ export type Status = "urgent" | "warning" | "watch" | "stable";
 
 export interface CohortRow {
   patient_id: string; name: string; age: number; sex: string; city: string; group: string; group_label: string;
-  hba1c: number; regimen: string[]; featured: boolean; headline?: string; glucose: number; slope: number;
+  hba1c: number; regimen: string[]; featured: boolean; uploaded?: boolean; headline?: string; glucose: number; slope: number;
   pred_60: number; p_hyper: number; p_hypo: number; p_spike: number; tir_7d?: number; tbr_7d?: number;
   gmi_7d?: number; alerts_24h: number; status: Status; priority: number; last_sample_min_ago: number;
 }
@@ -68,14 +68,16 @@ export interface Timeline {
   forecast_track_60: { t: string; pred: number; lo: number; hi: number }[];
   future_actual: { t: string; g: number }[];
 }
+type N = number | null;
 export interface Rx { drug: string; class?: string; atc?: string; daily_dose_mg?: number; daily_units?: number; frequency?: string }
 export interface Patient {
   patient_id: string; name: string; sex: string; age: number; city: string; state: string; language: string; occupation: string;
   group: string; group_label: string; featured: boolean; headline?: string; story?: string; story_minute?: number; source: string;
-  height_cm: number; weight_kg: number; bmi: number; waist_cm: number; sbp: number; dbp: number;
-  hba1c: number; fpg: number; fasting_insulin: number; c_peptide: number; homa_ir: number; homa_b: number;
-  tg: number; hdl: number; ldl: number; total_chol: number; egfr: number; urine_acr: number; alt: number; vitamin_b12: number;
-  diabetes_years: number; family_history_t2d: string; tcf7l2_rs7903146: string; prs_percentile: number; idrs: number;
+  height_cm: N; weight_kg: number; bmi: N; waist_cm: N; sbp: N; dbp: N;
+  hba1c: number; fpg: N; fasting_insulin: N; c_peptide: N; homa_ir: N; homa_b: N;
+  tg: N; hdl: N; ldl: N; total_chol: N; egfr: N; urine_acr: N; alt: N; vitamin_b12: N;
+  diabetes_years: N; family_history_t2d: string; tcf7l2_rs7903146: string | null; prs_percentile: N; idrs: N;
+  uploaded?: boolean; fpg_note?: string | null; upload_summary?: OnboardSummary;
   diagnoses: { code: string; snomed: string; display: string; onset: string | null }[];
   regimen: Rx[]; other_medications: Rx[]; hba1c_history: { date: string; hba1c: number }[];
   lifestyle: Record<string, string | number | boolean>;
@@ -104,3 +106,17 @@ export interface Agp {
   profile: { minute_of_day: number; p5: number; p25: number; p50: number; p75: number; p95: number }[];
   daily: { date: string; tbr_l2: number; tbr_l1: number; tir: number; tar_l1: number; tar_l2: number; mean_glucose: number }[];
 }
+
+// ------------------------------------------------------------------ onboarding
+export interface OnboardProfile {
+  name: string; age: number | ""; sex: "M" | "F"; weight_kg: number | ""; height_cm: number | ""; hba1c: number | "";
+  fpg: number | ""; fasting_insulin: number | ""; egfr: number | ""; diabetes_years: number | ""; sbp: number | ""; dbp: number | "";
+  city: string; state: string; language: string; medications: { drug: string; dose: number }[];
+}
+export interface OnboardSummary {
+  readings: number; days: number; hours: number; interval_min: number; meals: number; has_heart_rate: boolean; has_steps: boolean;
+  coverage_pct: number; onboard_hours: number; personalised: boolean; fit_rmse_120: number | null; prior_rmse_120: number | null;
+  phenotype: Record<string, number>; prior_phenotype: Record<string, number>; fpg_note: string | null; open_minute: number;
+  unit: string; columns: Record<string, string>; shift_days: number; replay_minute: number; first_minute: number; last_minute: number;
+}
+export interface OnboardResult { patient_id: string; name: string; summary: OnboardSummary }

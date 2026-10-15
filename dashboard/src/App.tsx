@@ -1,4 +1,4 @@
-import { Activity, FlaskConical, Info, Moon, Sun, Users } from "lucide-react";
+import { Activity, FlaskConical, Info, Moon, Sun, UserPlus, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { NavLink, Route, Routes } from "react-router-dom";
 import ClockBar from "./components/ClockBar";
@@ -6,6 +6,7 @@ import { useClock } from "./lib/clock";
 import { fmtDay } from "./lib/format";
 import About from "./pages/About";
 import Cohort from "./pages/Cohort";
+import Onboard from "./pages/Onboard";
 import PatientPage from "./pages/Patient";
 import Validation from "./pages/Validation";
 
@@ -28,6 +29,7 @@ function ThemeToggle() {
 
 const nav = [
   { to: "/", label: "Clinic", icon: Users },
+  { to: "/onboard", label: "New patient", icon: UserPlus },
   { to: "/validation", label: "Evidence", icon: FlaskConical },
   { to: "/about", label: "How it works", icon: Info },
 ];
@@ -54,7 +56,7 @@ export default function App() {
         </nav>
         <div className="mt-auto space-y-2 px-2 text-[11px] leading-snug text-muted">
           <div className="flex items-center gap-1.5"><Activity size={12} /> Clinical decision support · not a medical device</div>
-          <div>Patients shown are fictional (synthetic). Model evidence uses real CGMacros data.</div>
+          <div>Cohort patients are fictional (synthetic); uploaded patients are marked. Model evidence uses real CGMacros data.</div>
         </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
@@ -68,7 +70,7 @@ export default function App() {
             <ThemeToggle />
           </div>
         </header>
-        <nav className="flex gap-1 border-b bg-card px-3 py-1 md:hidden">
+        <nav className="flex gap-1 overflow-x-auto whitespace-nowrap border-b bg-card px-3 py-1 md:hidden">
           {nav.map(({ to, label }) => (
             <NavLink key={to} to={to + location.search} end={to === "/"} className={({ isActive }) => `rounded px-2 py-1 text-sm ${isActive ? "font-semibold text-brand" : "text-ink2"}`}>{label}</NavLink>
           ))}
@@ -78,6 +80,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Cohort />} />
               <Route path="/patient/:pid" element={<PatientPage />} />
+              <Route path="/onboard" element={<Onboard />} />
               <Route path="/validation" element={<Validation />} />
               <Route path="/about" element={<About />} />
             </Routes>
