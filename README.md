@@ -137,7 +137,7 @@ Diagrams: [docs/Architecture.pdf](docs/Architecture.pdf) (system architecture, v
 | Machine learning | **XGBoost 3** (residual forecasters, quantile regression, event classifiers, TreeSHAP), scikit-learn (cross-validation, metrics) |
 | Data | pandas, PyArrow (Parquet), joblib; FHIR R4 export (LOINC, SNOMED CT, ICD-10, WHO ATC, HL7 CGM IG codes) |
 | API | **FastAPI**, Uvicorn, Pydantic |
-| Dashboard | **React 18**, TypeScript, Vite, Tailwind CSS, Recharts, React Router |
+| Dashboard | **React 18**, TypeScript, Vite, Tailwind CSS, Recharts, React Router; self-hosted Inter, Newsreader and IBM Plex Mono. Text meets WCAG AA contrast, alert colours follow medical-alarm priority (IEC 60601-1-8) and chart colours are checked for colour-vision deficiency |
 | Copilot | Deterministic rule engine (offline); optional hosted language-model engine through the Anthropic SDK, with automatic fallback |
 | Quality | pytest (physiology sanity, look-ahead test, metrics, API end-to-end), Docker |
 
