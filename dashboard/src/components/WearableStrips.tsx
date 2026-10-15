@@ -4,7 +4,7 @@ import type { Timeline } from "../lib/api";
 import { fmtTime } from "../lib/format";
 
 const SLEEP_Y: Record<number, number> = { 0: 3, 3: 2, 1: 1, 2: 0 }; // hypnogram: wake top, deep bottom
-const SLEEP_NAME = ["Deep", "Light", "REM", "Awake"];
+const SLEEP_NAME = ["Deep", "Light", "REM", "Wake"];
 
 /** Time-aligned small multiples (never a dual axis): heart rate, steps, sleep stages. */
 export default function WearableStrips({ tl }: { tl: Timeline }) {
@@ -26,20 +26,20 @@ export default function WearableStrips({ tl }: { tl: Timeline }) {
   const hasSleep = rows.some((r) => r.sleep != null);
   const strip = (title: string, child: JSX.Element, h = 64) => (
     <div>
-      <div className="mb-0.5 pl-1 text-[11px] font-medium text-ink2">{title}</div>
+      <div className="label mb-1 pl-1 text-[10.5px]">{title}</div>
       <ResponsiveContainer width="100%" height={h}>{child}</ResponsiveContainer>
     </div>
   );
   const margin = { top: 2, right: 30, bottom: 0, left: -12 };
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-3">
       {strip("Heart rate (bpm)",
         <ComposedChart data={rows} margin={margin}>
           <CartesianGrid stroke="var(--grid)" vertical={false} />
           {axis(false)}
           <YAxis domain={[(v: number) => Math.floor((v - 5) / 10) * 10, (v: number) => Math.ceil((v + 5) / 10) * 10]} stroke="var(--axis)"
             tickLine={false} width={48} tickCount={3} allowDecimals={false} tickFormatter={(v) => String(Math.round(v))} />
-          <ReferenceLine x={now} stroke="var(--ink-2)" />
+          <ReferenceLine x={now} stroke="var(--ink)" strokeWidth={1.25} />
           <Line dataKey="hr" stroke="var(--s3)" strokeWidth={1.5} dot={false} isAnimationActive={false} />
           <Tooltip content={<Tip unit="bpm" k="hr" />} />
         </ComposedChart>)}
@@ -48,20 +48,20 @@ export default function WearableStrips({ tl }: { tl: Timeline }) {
           <CartesianGrid stroke="var(--grid)" vertical={false} />
           {axis(!hasSleep)}
           <YAxis stroke="var(--axis)" tickLine={false} width={48} tickCount={3} allowDecimals={false} />
-          <ReferenceLine x={now} stroke="var(--ink-2)" />
+          <ReferenceLine x={now} stroke="var(--ink)" strokeWidth={1.25} />
           <Bar dataKey="steps" fill="var(--s3)" radius={[2, 2, 0, 0]} isAnimationActive={false} />
           <Tooltip content={<Tip unit="steps" k="steps" />} />
         </ComposedChart>, hasSleep ? 56 : 80)}
       {hasSleep && strip("Sleep stages",
-        <ComposedChart data={rows} margin={margin}>
+        <ComposedChart data={rows} margin={{ ...margin, top: 8 }}>
           <CartesianGrid stroke="var(--grid)" vertical={false} />
           {axis(true)}
           <YAxis domain={[0, 3]} ticks={[0, 1, 2, 3]} interval={0} tickFormatter={(v) => SLEEP_NAME[v]} stroke="var(--axis)" tickLine={false} width={48}
-            tick={{ fontSize: 10, fill: "var(--muted)" }} />
-          <ReferenceLine x={now} stroke="var(--ink-2)" />
+            tick={{ fontSize: 10.5, fill: "var(--muted)" }} />
+          <ReferenceLine x={now} stroke="var(--ink)" strokeWidth={1.25} />
           <Line type="stepAfter" dataKey="sleep" stroke="var(--brand)" strokeWidth={1.5} dot={false} isAnimationActive={false} connectNulls={false} />
           <Tooltip content={<Tip k="sleep" />} />
-        </ComposedChart>, 92)}
+        </ComposedChart>, 100)}
     </div>
   );
 }
@@ -71,5 +71,5 @@ function Tip({ active, payload, label, unit, k }: { active?: boolean; payload?: 
   const v = payload[0].payload[k];
   if (v == null) return null;
   const text = k === "sleep" ? SLEEP_NAME[v] : `${Math.round(v)} ${unit}`;
-  return <div className="card px-2 py-1 text-xs shadow"><span className="text-muted">{fmtTime(new Date(label!))}</span> · <b>{text}</b></div>;
+  return <div className="card px-2.5 py-1.5 text-xs shadow-pop"><span className="text-muted">{fmtTime(new Date(label!))}</span> · <b>{text}</b></div>;
 }

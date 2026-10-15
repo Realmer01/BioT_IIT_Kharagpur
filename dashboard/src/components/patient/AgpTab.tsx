@@ -4,7 +4,13 @@ import { useState } from "react";
 import { useFetch, type Agp, type Patient } from "../../lib/api";
 import { useClock } from "../../lib/clock";
 import { AgpChart, DailyTir, TirBar } from "../Agp";
-import { Card, StatTile } from "../ui";
+import { Card, Segmented, Stats } from "../ui";
+
+const TARGET_LABEL: Record<string, string> = {
+  "tir>70%": "Time in range above 70 %", "tir>50%": "Time in range above 50 %", "tbr<4%": "Time below 70 under 4 %",
+  "tbr<1%": "Time below 70 under 1 %", "tbr_l2<1%": "Time below 54 under 1 %", "tar<25%": "Time above 180 under 25 %",
+  "tar_l2<5%": "Time above 250 under 5 %", "tar_l2<10%": "Time above 250 under 10 %", "cv<=36%": "Variability (CV) at most 36 %",
+};
 
 export default function AgpTab({ p }: { p: Patient }) {
   const { minute } = useClock();
@@ -13,39 +19,37 @@ export default function AgpTab({ p }: { p: Patient }) {
   if (!data) return <div className="py-16 text-center text-muted">Loading AGP…</div>;
   const s = data.summary;
   return (
-    <div className={clsx("space-y-4", loading && "refetching")}>
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-ink2">Ambulatory Glucose Profile per the International Consensus on Time in Range · {s.days} days · sensor active {s.active_pct.toFixed(0)}%</p>
-        <div className="flex gap-1">{[7, 14].map((d) => (
-          <button key={d} onClick={() => setDays(d)} className={clsx("rounded px-2 py-0.5 text-xs", days === d ? "bg-brandsoft font-semibold text-brand" : "text-ink2 hover:bg-page")}>{d} days</button>
-        ))}</div>
+    <div className={clsx("space-y-5", loading && "refetching")}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-[13px] text-ink2">Ambulatory Glucose Profile per the International Consensus on Time in Range · {s.days} days · sensor active {s.active_pct.toFixed(0)} %</p>
+        <Segmented value={days} onChange={setDays} options={[7, 14].map((d) => ({ value: d, label: `${d} days` }))} />
       </div>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        <StatTile label="Time in range 70–180" value={s.tir.toFixed(0)} unit="%" sub="target >70 %" />
-        <StatTile label="Time below 70" value={s.tbr.toFixed(1)} unit="%" sub="target <4 %" />
-        <StatTile label="Time above 180" value={s.tar.toFixed(0)} unit="%" sub="target <25 %" />
-        <StatTile label="Mean glucose" value={s.mean_glucose.toFixed(0)} unit="mg/dL" />
-        <StatTile label="GMI" value={s.gmi.toFixed(1)} unit="%" sub={`lab HbA1c ${p.hba1c}%`} />
-        <StatTile label="Variability (CV)" value={s.cv.toFixed(0)} unit="%" sub="target ≤36 %" />
-      </div>
-      <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
+      <Stats className="grid-cols-2 md:grid-cols-3 xl:grid-cols-6" items={[
+        { label: "Time in range 70–180", value: s.tir.toFixed(0), unit: "%", sub: "target above 70 %" },
+        { label: "Time below 70", value: s.tbr.toFixed(1), unit: "%", sub: "target under 4 %", accent: s.tbr >= 4 ? "var(--critical-ink)" : undefined },
+        { label: "Time above 180", value: s.tar.toFixed(0), unit: "%", sub: "target under 25 %" },
+        { label: "Mean glucose", value: s.mean_glucose.toFixed(0), unit: "mg/dL" },
+        { label: "GMI", value: s.gmi.toFixed(1), unit: "%", sub: `lab HbA1c ${p.hba1c} %` },
+        { label: "Variability (CV)", value: s.cv.toFixed(0), unit: "%", sub: "target at most 36 %" },
+      ]} />
+      <div className="grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
         <Card title="Time in ranges">
           <TirBar s={s} />
-          <ul className="mt-4 space-y-1 border-t pt-3 text-xs">
+          <ul className="mt-4 space-y-1.5 border-t pt-3.5 text-xs">
             {Object.entries(data.targets).map(([k, ok]) => (
-              <li key={k} className="flex items-center gap-1.5">
-                {ok ? <Check size={13} style={{ color: "var(--good)" }} /> : <X size={13} style={{ color: "var(--critical)" }} />}
-                <span className="text-ink2">{k.replace("_l2", " level 2").replace("tbr", "TBR").replace("tar", "TAR").replace("tir", "TIR").replace("cv", "CV")}</span>
-                <span className="ml-auto text-muted">{ok ? "met" : "not met"}</span>
+              <li key={k} className="flex items-center gap-2">
+                {ok ? <Check size={13} strokeWidth={2.4} style={{ color: "var(--good)" }} /> : <X size={13} strokeWidth={2.4} style={{ color: "var(--critical)" }} />}
+                <span className="text-ink2">{TARGET_LABEL[k] ?? k}</span>
+                <span className="ml-auto font-medium" style={{ color: ok ? "var(--good-ink)" : "var(--critical-ink)" }}>{ok ? "met" : "not met"}</span>
               </li>
             ))}
           </ul>
         </Card>
-        <Card title="Glucose profile by time of day" subtitle="Median (line), 25–75th (dark band) and 5–95th percentile (light band); target zone shaded">
+        <Card title="Glucose profile by time of day" subtitle="Median line, 25–75th percentile (dark band) and 5–95th percentile (light band); target zone shaded">
           <AgpChart agp={data} />
         </Card>
       </div>
-      <Card title="Daily time in range" subtitle="One bar per day; label = % in range">
+      <Card title="Daily time in range" subtitle="One bar per day; the label is the share of time in range">
         <DailyTir agp={data} />
       </Card>
     </div>

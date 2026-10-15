@@ -2,7 +2,7 @@ import clsx from "clsx";
 import { ArrowRight, Check, FileUp, Loader2, Plus, RotateCcw, X } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card } from "../components/ui";
+import { Card, Note, PageHeader } from "../components/ui";
 import { getJSON, type OnboardProfile, type OnboardResult } from "../lib/api";
 import { useClock } from "../lib/clock";
 
@@ -29,8 +29,9 @@ const PHENO: [string, string, number][] = [
   ["absorption_speed", "Meal absorption speed", 2],
   ["dawn_effect", "Dawn effect", 2],
 ];
-const box = "rounded-md border bg-card px-2.5 py-1.5 text-sm outline-none focus:border-brand";
-const input = `w-full ${box}`;
+const box = "input";
+const input = "input";
+const step = (n: number, title: string) => <span className="flex items-baseline gap-2.5"><span className="display text-[17px] leading-none text-accent">{String(n).padStart(2, "0")}</span>{title}</span>;
 
 interface FileInfo { name: string; rows: number; first: string; last: string; columns: string[] }
 
@@ -44,9 +45,9 @@ function describe(name: string, text: string): FileInfo {
 function Field({ label, hint, required, children, className }: { label: string; hint?: string; required?: boolean; children: ReactNode; className?: string }) {
   return (
     <label className={clsx("block", className)}>
-      <span className="mb-1 flex items-baseline justify-between gap-2 text-xs text-ink2">
-        <span>{label}{required && <span className="text-critical"> *</span>}</span>
-        {hint && <span className="text-[11px] text-muted">{hint}</span>}
+      <span className="mb-1.5 flex items-baseline justify-between gap-2 text-xs">
+        <span className="font-medium text-ink2">{label}{required && <span className="text-criticalink"> *</span>}</span>
+        {hint && <span className="text-[11px] text-faint">{hint}</span>}
       </span>
       {children}
     </label>
@@ -111,30 +112,22 @@ export default function Onboard() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">New patient</h1>
-          <p className="max-w-3xl text-sm text-ink2">
-            Build a twin from a short health record and a CGM export. The record sets the twin's starting point on day zero,
-            the first part of the recording personalises it, and everything after that is forecast by models that have never seen this patient.
-          </p>
-        </div>
-        <button onClick={loadSample} className="inline-flex items-center gap-1.5 rounded-md border bg-card px-3 py-1.5 text-sm text-ink hover:border-brand">
-          <FileUp size={15} />Load sample patient
-        </button>
-      </div>
+      <PageHeader eyebrow="Onboarding" title="Add a patient to the clinic"
+        right={<button onClick={loadSample} className="btn-secondary h-9"><FileUp size={15} strokeWidth={1.8} />Load sample patient</button>}>
+        Build a twin from a short health record and a CGM export. The record sets the twin's starting point on day zero, the first part of the
+        recording personalises it, and everything after that is forecast by models that have never seen this patient.
+      </PageHeader>
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-4">
-          <Card title={<><span className="tnum mr-2 text-muted">01</span>Health record</>} subtitle="Age, weight and HbA1c are enough to start; every other value sharpens the prior">
+          <Card title={step(1, "Health record")} subtitle="Age, weight and HbA1c are enough to start; every other value sharpens the prior">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Field label="Name" className="col-span-2"><input className={input} value={profile.name} onChange={(e) => set("name", e.target.value)} placeholder="Patient name" /></Field>
               <Field label="Age" required hint="years"><input {...num("age")} /></Field>
               <Field label="Sex">
-                <div className="flex rounded-md border p-0.5">
+                <div className="segmented flex h-9 w-full">
                   {(["F", "M"] as const).map((s) => (
-                    <button key={s} type="button" onClick={() => set("sex", s)}
-                      className={clsx("flex-1 rounded px-2 py-1 text-sm", profile.sex === s ? "bg-brandsoft font-semibold text-brand" : "text-ink2")}>{s === "F" ? "Female" : "Male"}</button>
+                    <button key={s} type="button" aria-pressed={profile.sex === s} onClick={() => set("sex", s)} className="flex-1 text-[13px]">{s === "F" ? "Female" : "Male"}</button>
                   ))}
                 </div>
               </Field>
@@ -154,9 +147,9 @@ export default function Onboard() {
             </div>
           </Card>
 
-          <Card title={<><span className="tnum mr-2 text-muted">02</span>Diabetes medicines</>} subtitle="Each one sets a drug effect in the twin's physiology"
+          <Card title={step(2, "Diabetes medicines")} subtitle="Each one sets a drug effect in the twin's physiology"
             right={<button onClick={() => set("medications", [...profile.medications, { drug: drugs.find((d) => !profile.medications.some((m) => m.drug === d)) ?? drugs[0], dose: USUAL_DOSE[drugs.find((d) => !profile.medications.some((m) => m.drug === d)) ?? drugs[0]] ?? 0 }])}
-              className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border px-2 py-1 text-xs text-ink2 hover:border-brand hover:text-ink"><Plus size={13} />Add medicine</button>}>
+              className="btn-secondary h-7 px-2.5 text-xs"><Plus size={13} />Add medicine</button>}>
             {profile.medications.length === 0 ? (
               <p className="text-sm text-muted">None added: the twin will assume lifestyle management only.</p>
             ) : (
@@ -170,26 +163,26 @@ export default function Onboard() {
                     <input type="number" step="any" value={m.dose} className={clsx(box, "w-24 text-right")}
                       onChange={(e) => set("medications", profile.medications.map((x, j) => j === i ? { ...x, dose: Number(e.target.value) } : x))} />
                     <span className="w-14 text-xs text-muted">{unitOf(m.drug)}</span>
-                    <button onClick={() => set("medications", profile.medications.filter((_, j) => j !== i))} title="Remove" className="rounded p-1 text-muted hover:bg-page hover:text-ink"><X size={15} /></button>
+                    <button onClick={() => set("medications", profile.medications.filter((_, j) => j !== i))} title="Remove" className="btn-icon h-8 w-8"><X size={15} /></button>
                   </li>
                 ))}
               </ul>
             )}
           </Card>
 
-          <Card title={<><span className="tnum mr-2 text-muted">03</span>CGM and wearable data</>} subtitle="One CSV: glucose is required; heart rate, steps and logged meals are used when present">
+          <Card title={step(3, "CGM and wearable data")} subtitle="One CSV: glucose is required; heart rate, steps and logged meals are used when present">
             <div
               onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)}
               onDrop={(e) => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files[0]; if (f) loadFile(f); }}
               onClick={() => fileRef.current?.click()}
-              className={clsx("cursor-pointer rounded-lg border border-dashed px-4 py-6 text-center transition-colors", drag ? "border-brand bg-brandsoft" : "hover:border-brand")}>
+              className={clsx("cursor-pointer rounded-lg border border-dashed border-strong px-4 py-7 text-center transition-colors", drag ? "border-brand bg-brandsoft" : "bg-surface hover:border-brand")}>
               <input ref={fileRef} type="file" accept=".csv,.txt,text/csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) loadFile(f); e.target.value = ""; }} />
               {file ? (
                 <div className="text-sm">
                   <div className="font-semibold text-ink">{file.name}</div>
                   <div className="tnum mt-0.5 text-xs text-ink2">{file.rows.toLocaleString()} row{file.rows === 1 ? "" : "s"} · {file.first} to {file.last}</div>
                   <div className="mt-2 flex flex-wrap justify-center gap-1">
-                    {file.columns.map((c) => <span key={c} className="rounded bg-page px-1.5 py-0.5 font-mono text-[11px] text-ink2">{c}</span>)}
+                    {file.columns.map((c) => <span key={c} className="rounded border bg-card px-1.5 py-0.5 font-mono text-[11px] text-ink2">{c}</span>)}
                   </div>
                   <div className="mt-2 text-xs text-muted">Click or drop to replace</div>
                 </div>
@@ -217,14 +210,13 @@ export default function Onboard() {
               </ol>
             ) : (
               <>
-                <button disabled={missing.length > 0} onClick={build}
-                  className="flex w-full items-center justify-center gap-1.5 rounded-md bg-brand px-3 py-2 text-sm font-semibold text-onbrand disabled:cursor-not-allowed disabled:opacity-40">
+                <button disabled={missing.length > 0} onClick={build} className="btn-primary h-10 w-full text-sm font-semibold">
                   Build twin<ArrowRight size={15} />
                 </button>
                 <p className="mt-2 text-xs text-muted">
                   {missing.length ? `Still needed: ${missing.join(", ")}.` : "Takes a few seconds. The data stays on this server and can be removed from the patient page."}
                 </p>
-                {error && <div className="mt-3 rounded-md border px-2.5 py-2 text-xs text-ink" style={{ borderColor: "var(--critical)" }}><b>Could not build the twin.</b> {error}</div>}
+                {error && <div className="mt-3 rounded-r-md border-l-2 border-critical bg-criticalsoft px-3 py-2 text-xs text-ink"><b className="text-criticalink">Could not build the twin.</b> {error}</div>}
               </>
             )}
           </Card>
@@ -241,9 +233,9 @@ export default function Onboard() {
                   ["protein_g, fat_g, fiber_g, meal", "optional", "meal detail and name"],
                 ].map(([c, req, d]) => (
                   <tr key={c} className="border-b align-top last:border-0">
-                    <td className="py-1.5 pr-2 font-mono text-[11px] text-ink">{c}</td>
-                    <td className={clsx("py-1.5 pr-2", req === "required" ? "font-medium text-ink" : "text-muted")}>{req}</td>
-                    <td className="py-1.5 text-ink2">{d}</td>
+                    <td className="py-2 pr-2 font-mono text-[11px] text-ink">{c}</td>
+                    <td className={clsx("py-2 pr-2", req === "required" ? "font-semibold text-ink" : "text-muted")}>{req}</td>
+                    <td className="py-2 text-ink2">{d}</td>
                   </tr>
                 ))}
               </tbody>
@@ -274,9 +266,9 @@ function Result({ r, onAnother }: { r: OnboardResult; onAnother: () => void }) {
   ].filter(Boolean) as string[];
   return (
     <div className="mx-auto max-w-4xl space-y-4">
-      <div className="card px-5 py-4">
+      <div className="card px-6 py-5">
         <div className="eyebrow">Twin ready · {r.patient_id}</div>
-        <h1 className="mt-1 text-xl font-semibold">{r.name}</h1>
+        <h1 className="display mt-1 text-[30px] leading-tight text-ink">{r.name}</h1>
         <p className="mt-1 text-sm text-ink2">
           Personalised on the first {Math.round(s.onboard_hours)} hours of the recording. The remaining {Math.max(0, s.hours - s.onboard_hours).toFixed(0)} hours
           are forecast and scored exactly as they would have been live, so you can replay them and check the alerts against what happened.
@@ -291,14 +283,14 @@ function Result({ r, onAnother }: { r: OnboardResult; onAnother: () => void }) {
           ].map(([k, v, sub]) => (
             <div key={k}>
               <div className="text-xs text-muted">{k}</div>
-              <div className="tnum mt-0.5 text-2xl font-semibold">{v}</div>
+              <div className="display mt-1 text-[28px] leading-none">{v}</div>
               <div className="text-xs text-ink2">{sub}</div>
             </div>
           ))}
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <button onClick={open} className="inline-flex items-center gap-1.5 rounded-md bg-brand px-3.5 py-2 text-sm font-semibold text-onbrand">Open twin<ArrowRight size={15} /></button>
-          <button onClick={onAnother} className="inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-sm text-ink2 hover:border-brand hover:text-ink"><RotateCcw size={14} />Onboard another</button>
+          <button onClick={open} className="btn-primary h-9 px-4 text-sm">Open twin<ArrowRight size={15} /></button>
+          <button onClick={onAnother} className="btn-secondary h-9 px-3.5 text-sm"><RotateCcw size={14} />Onboard another</button>
         </div>
       </div>
 

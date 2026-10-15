@@ -51,18 +51,18 @@ export default function GlucoseChart({ tl, showFuture, showTrack, showTwin, heig
         <XAxis dataKey="ts" type="number" scale="time" domain={domain} ticks={ticks} tickFormatter={(v) => fmtTime(new Date(v))}
           stroke="var(--axis)" tickLine={false} />
         <YAxis domain={[40, yMax]} ticks={[54, 70, 120, 180, 250, 300, 350, 400].filter((v) => v <= yMax)} stroke="var(--axis)" tickLine={false} width={48} />
-        <ReferenceLine y={70} stroke="var(--critical)" strokeWidth={1} label={{ value: "70", position: "right", fill: "var(--critical)", fontSize: 10 }} />
-        <ReferenceLine y={180} stroke="var(--warning)" strokeWidth={1} label={{ value: "180", position: "right", fill: "var(--ink-2)", fontSize: 10 }} />
-        <ReferenceArea x1={now} x2={domain[1]} fill="var(--page)" fillOpacity={0.55} stroke="none" />
+        <ReferenceLine y={70} stroke="var(--critical)" strokeWidth={1} label={{ value: "70", position: "right", fill: "var(--critical-ink)", fontSize: 10.5, fontWeight: 600 }} />
+        <ReferenceLine y={180} stroke="var(--warning)" strokeWidth={1} label={{ value: "180", position: "right", fill: "var(--warning-ink)", fontSize: 10.5, fontWeight: 600 }} />
+        <ReferenceArea x1={now} x2={domain[1]} fill="var(--surface-1)" fillOpacity={0.9} stroke="none" />
         {mealMarks.map((ml) => (
           <ReferenceLine key={ml.t + ml.name} x={ml.ts} stroke="var(--axis)" strokeWidth={1} strokeDasharray={ml.show ? undefined : "2 3"}
             label={ml.show ? (p: any) => (
-              <text x={p.viewBox.x + 4} y={p.viewBox.y + 11 + ml.lvl * 12} fontSize={10} fill="var(--ink-2)">
+              <text x={p.viewBox.x + 4} y={p.viewBox.y + 11 + ml.lvl * 12} fontSize={10.5} fill="var(--muted)">
                 {`${SLOT[ml.slot] ?? "Meal"} ${Math.round(ml.carbs)}g`}
               </text>) : undefined} />
         ))}
-        <ReferenceLine x={now} stroke="var(--ink-2)" strokeWidth={1.5} label={{ value: "Now", position: "top", fill: "var(--ink)", fontSize: 11, fontWeight: 600 }} />
-        <Area dataKey="band" stroke="none" fill="var(--s2)" fillOpacity={0.18} isAnimationActive={false} connectNulls name="90% interval" />
+        <ReferenceLine x={now} stroke="var(--ink)" strokeWidth={1.25} label={{ value: "NOW", position: "top", fill: "var(--ink)", fontSize: 10, fontWeight: 700, letterSpacing: 0.8 }} />
+        <Area dataKey="band" stroke="none" fill="var(--s2)" fillOpacity={0.16} isAnimationActive={false} connectNulls name="90% interval" />
         {showTwin && <Line dataKey="twin" stroke="var(--ink-2)" strokeDasharray="2 3" strokeWidth={2} dot={false} isAnimationActive={false} name="Physiology only" />}
         {showTrack && <Line dataKey="track" stroke="var(--s3)" strokeDasharray="5 4" strokeWidth={2} dot={false} isAnimationActive={false} connectNulls name="Forecast made 60 min earlier" />}
         <Line dataKey="cgm" stroke="var(--s1)" strokeWidth={2} dot={false} isAnimationActive={false} name="CGM glucose" />
@@ -82,15 +82,15 @@ function Tip({ active, payload, label }: { active?: boolean; payload?: any[]; la
       <span className="h-2 w-2 rounded-full" style={{ background: c }} />{name}</span><span className="tnum font-semibold text-ink">{Math.round(v)}</span></div>
   );
   return (
-    <div className="card min-w-[190px] px-3 py-2 text-xs shadow-lg">
-      <div className="mb-1 font-semibold text-ink">{fmtTime(new Date(label!))}</div>
+    <div className="card min-w-[200px] px-3 py-2.5 text-xs shadow-pop">
+      <div className="mb-1.5 font-semibold text-ink">{fmtTime(new Date(label!))}</div>
       {line("CGM", r.cgm, "var(--s1)")}
       {line("Forecast", r.pred, "var(--s2)")}
       {r.band && <div className="flex justify-between gap-4 text-ink2"><span className="pl-3.5">90% interval</span><span className="tnum">{Math.round(r.band[0])}–{Math.round(r.band[1])}</span></div>}
       {line("Physiology only", r.twin, "var(--ink-2)")}
       {line("Predicted 60 min before", r.track, "var(--s3)")}
       {line("Actual (revealed)", r.future, "var(--s1)")}
-      <div className="mt-1 text-[10px] text-muted">mg/dL</div>
+      <div className="mt-1.5 border-t pt-1 text-[11px] text-muted">mg/dL</div>
     </div>
   );
 }

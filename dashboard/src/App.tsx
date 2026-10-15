@@ -1,9 +1,10 @@
-import { Activity, FlaskConical, Info, Moon, Sun, UserPlus, Users } from "lucide-react";
+import clsx from "clsx";
+import { FlaskConical, Info, Moon, Sun, UserPlus, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { NavLink, Route, Routes } from "react-router-dom";
 import ClockBar from "./components/ClockBar";
 import { useClock } from "./lib/clock";
-import { fmtDay } from "./lib/format";
+import { fmtDay, fmtTime } from "./lib/format";
 import About from "./pages/About";
 import Cohort from "./pages/Cohort";
 import Onboard from "./pages/Onboard";
@@ -21,61 +22,87 @@ function ThemeToggle() {
   }, [theme]);
   const dark = theme === "dark" || (!theme && matchMedia("(prefers-color-scheme: dark)").matches);
   return (
-    <button onClick={() => setTheme(dark ? "light" : "dark")} title="Toggle theme" className="rounded-md p-2 text-ink2 hover:bg-page">
-      {dark ? <Sun size={16} /> : <Moon size={16} />}
+    <button onClick={() => setTheme(dark ? "light" : "dark")} title={dark ? "Light theme" : "Dark theme"} className="btn-icon">
+      {dark ? <Sun size={16} strokeWidth={1.75} /> : <Moon size={16} strokeWidth={1.75} />}
     </button>
   );
 }
 
-const nav = [
-  { to: "/", label: "Clinic", icon: Users },
-  { to: "/onboard", label: "New patient", icon: UserPlus },
-  { to: "/validation", label: "Evidence", icon: FlaskConical },
-  { to: "/about", label: "How it works", icon: Info },
+const NAV = [
+  { group: "Clinic", items: [
+    { to: "/", label: "Remote monitoring", short: "Clinic", icon: Users },
+    { to: "/onboard", label: "New patient", short: "New patient", icon: UserPlus },
+  ] },
+  { group: "Model", items: [
+    { to: "/validation", label: "Evidence", short: "Evidence", icon: FlaskConical },
+    { to: "/about", label: "How it works", short: "How it works", icon: Info },
+  ] },
 ];
+const FLAT = NAV.flatMap((g) => g.items);
+
+function Brand({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <img src="/logo.svg" className={compact ? "h-7 w-7" : "h-8 w-8"} alt="" />
+      <div className="leading-none">
+        <div className="font-serif text-[18px] font-semibold tracking-[-0.01em] text-ink">MadhuTwin</div>
+        {!compact && <div className="mt-1 text-[11px] text-muted">Diabetes digital twin</div>}
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   const { ready, minute, timeOf } = useClock();
   return (
     <div className="flex min-h-full">
-      <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r bg-card px-3 py-4 md:flex">
-        <div className="flex items-center gap-2 px-2">
-          <img src="/logo.svg" className="h-8 w-8" alt="" />
-          <div>
-            <div className="text-[15px] font-semibold leading-tight">MadhuTwin</div>
-            <div className="text-[11px] text-muted">Diabetes digital twin</div>
-          </div>
-        </div>
-        <nav className="mt-6 space-y-0.5">
-          {nav.map(({ to, label, icon: Icon }) => (
-            <NavLink key={to} to={to + location.search} end={to === "/"}
-              className={({ isActive }) => `flex items-center gap-2 rounded-md px-2.5 py-2 text-sm ${isActive ? "bg-brandsoft font-semibold text-brand" : "text-ink2 hover:bg-page"}`}>
-              <Icon size={16} />{label}
-            </NavLink>
+      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r bg-sidebar px-3 pb-4 pt-5 md:flex">
+        <div className="px-2.5"><Brand /></div>
+        <nav className="mt-7 space-y-5">
+          {NAV.map((g) => (
+            <div key={g.group}>
+              <div className="label px-2.5 pb-1.5 text-[10.5px]">{g.group}</div>
+              <div className="space-y-0.5">
+                {g.items.map(({ to, label, icon: Icon }) => (
+                  <NavLink key={to} to={to + location.search} end={to === "/"}
+                    className={({ isActive }) => clsx("group flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-[13.5px] transition-colors",
+                      isActive ? "bg-brandsoft font-semibold text-ink shadow-[inset_2px_0_0_var(--accent)]" : "text-ink2 hover:bg-page hover:text-ink")}>
+                    {({ isActive }) => (<><Icon size={16} strokeWidth={1.75} className={isActive ? "text-ink" : "text-faint group-hover:text-ink2"} />{label}</>)}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
-        <div className="mt-auto space-y-2 px-2 text-[11px] leading-snug text-muted">
-          <div className="flex items-center gap-1.5"><Activity size={12} /> Clinical decision support · not a medical device</div>
-          <div>Cohort patients are fictional (synthetic); uploaded patients are marked. Model evidence uses real CGMacros data.</div>
+        <div className="mt-auto space-y-3 px-2.5 text-[11px] leading-relaxed text-muted">
+          <div className="border-t pt-3">
+            <div className="font-medium text-ink2">Clinical decision support</div>
+            <div>Not a medical device. Cohort patients are fictional; uploaded patients are marked. Evidence uses real CGMacros data.</div>
+          </div>
+          <div className="text-faint">Team BioT · IIT Kharagpur</div>
         </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2 border-b bg-card/95 px-4 py-2 backdrop-blur">
-          <div className="flex items-center gap-2 md:hidden">
-            <img src="/logo.svg" className="h-7 w-7" alt="" /><span className="font-semibold">MadhuTwin</span>
+        <header className="sticky top-0 z-20 border-b bg-card/85 backdrop-blur-md">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2 md:px-6">
+            <div className="md:hidden"><Brand compact /></div>
+            <div className="hidden items-baseline gap-2 sm:flex">
+              <span className="label text-[10.5px]">Clinic clock</span>
+              <span className="text-[13px] text-ink2">{ready ? `${fmtDay(timeOf(minute))}, ${fmtTime(timeOf(minute))}` : "…"}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {ready && <ClockBar />}
+              <ThemeToggle />
+            </div>
           </div>
-          <div className="hidden text-xs text-muted sm:block">Virtual clinic clock · {ready ? fmtDay(timeOf(minute)) : "…"}</div>
-          <div className="flex items-center gap-2">
-            {ready && <ClockBar />}
-            <ThemeToggle />
-          </div>
+          <nav className="flex gap-1 overflow-x-auto whitespace-nowrap border-t px-3 md:hidden">
+            {FLAT.map(({ to, short }) => (
+              <NavLink key={to} to={to + location.search} end={to === "/"}
+                className={({ isActive }) => clsx("-mb-px border-b-2 px-2 py-2 text-[13px]", isActive ? "border-brand font-semibold text-ink" : "border-transparent text-muted")}>{short}</NavLink>
+            ))}
+          </nav>
         </header>
-        <nav className="flex gap-1 overflow-x-auto whitespace-nowrap border-b bg-card px-3 py-1 md:hidden">
-          {nav.map(({ to, label }) => (
-            <NavLink key={to} to={to + location.search} end={to === "/"} className={({ isActive }) => `rounded px-2 py-1 text-sm ${isActive ? "font-semibold text-brand" : "text-ink2"}`}>{label}</NavLink>
-          ))}
-        </nav>
-        <main className="mx-auto w-full max-w-[1500px] flex-1 px-4 py-4">
+        <main className="mx-auto w-full max-w-[1480px] flex-1 px-4 py-6 md:px-8 md:py-7">
           {ready ? (
             <Routes>
               <Route path="/" element={<Cohort />} />
