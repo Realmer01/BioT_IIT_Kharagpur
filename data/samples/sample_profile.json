@@ -1,0 +1,31 @@
+{
+ "name": "Sunita Verma",
+ "age": 60,
+ "sex": "F",
+ "city": "Lucknow",
+ "state": "Uttar Pradesh",
+ "language": "Hindi",
+ "weight_kg": 49.8,
+ "height_cm": 141.0,
+ "hba1c": 7.3,
+ "fpg": 116,
+ "fasting_insulin": 15.9,
+ "egfr": 91,
+ "diabetes_years": 0.9,
+ "sbp": 122,
+ "dbp": 78,
+ "medications": [
+  {
+   "drug": "Metformin",
+   "dose": 1500
+  },
+  {
+   "drug": "Glimepiride",
+   "dose": 4
+  },
+  {
+   "drug": "Dapagliflozin",
+   "dose": 10
+  }
+ ]
+}

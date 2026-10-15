@@ -12,6 +12,7 @@ venv/
 data/raw/
 data/processed/
 data/synthetic/
+data/uploaded/
 models/
 reports/*.parquet
 

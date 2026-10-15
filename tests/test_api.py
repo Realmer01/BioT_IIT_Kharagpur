@@ -55,3 +55,29 @@ def test_what_if_walk_lowers_peak(client):
 def test_copilot_rule_engine(client):
     r = client.post("/api/patients/BH-0001/copilot", json={"engine": "rule"}).json()
     assert r["engine"] == "rule" and "Snapshot" in r["text"]
+
+
+def test_onboard_sample_patient(client):
+    s = client.get("/api/onboard/sample").json()
+    r = client.post("/api/onboard", json={"profile": s["profile"], "csv": s["csv"]})
+    assert r.status_code == 200, r.text
+    pid, summ = r.json()["patient_id"], r.json()["summary"]
+    try:
+        assert pid.startswith("UP-") and summ["readings"] > 1000 and summ["meals"] > 0
+        assert summ["fit_rmse_120"] < summ["prior_rmse_120"], "personalisation should beat the record-only prior"
+        p = client.get(f"/api/patients/{pid}").json()
+        assert p["uploaded"] and p["upload_summary"]["readings"] == summ["readings"]
+        m = summ["replay_minute"]
+        assert 0 <= client.get(f"/api/patients/{pid}/risk?minute={m}").json()["probabilities"]["hyper_2h"] <= 1
+        rows = client.get(f"/api/cohort?minute={m}").json()["patients"]
+        assert any(row["patient_id"] == pid and row["uploaded"] for row in rows)
+    finally:
+        assert client.delete(f"/api/patients/{pid}").status_code == 200
+    assert client.get(f"/api/patients/{pid}").status_code == 404
+
+
+def test_onboard_rejects_bad_input(client):
+    s = client.get("/api/onboard/sample").json()
+    r = client.post("/api/onboard", json={"profile": s["profile"], "csv": "foo,bar\n1,2\n"})
+    assert r.status_code == 400 and "glucose" in r.json()["detail"]
+    assert client.delete("/api/patients/BH-0001").status_code == 400, "cohort patients cannot be removed"

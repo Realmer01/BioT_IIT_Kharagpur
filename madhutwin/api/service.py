@@ -18,8 +18,8 @@ import numpy as np
 import pandas as pd
 
 from madhutwin import agp as AGP
-from madhutwin import copilot
-from madhutwin.config import HORIZONS, MODELS, PROCESSED, REPORTS
+from madhutwin import copilot, onboarding
+from madhutwin.config import DATA, HORIZONS, MODELS, PROCESSED, REPORTS
 from madhutwin.data import fhir
 from madhutwin.data import synth_cohort as S
 from madhutwin.data.indian_foods import BY_ID, FOODS, SWAPS
@@ -29,6 +29,8 @@ from madhutwin.twin import DigitalTwin, prepare_arrays
 
 GROUP_LABEL = {"t2d": "Type 2 diabetes", "prediabetes": "Prediabetes", "normal": "Normoglycaemic"}
 HYPER_THR, HYPO_THR, SPIKE_THR = 0.5, 0.25, 0.6
+UPLOADS = DATA / "uploaded"  # clinician-onboarded patients (gitignored with the rest of data/)
+UPLOAD_FOLD = 0  # any fold model works: none of them has seen an uploaded patient
 GLUCOSE_TABS = {"carbs": 15.0, "protein": 0, "fat": 0, "fiber": 0, "gi": 100}
 
 
@@ -97,6 +99,89 @@ class TwinService:
         self.end_minute = S.DAYS * 1440 - 5
         self.story_minutes = {pid: self._story_minute(pid) for pid in self.pids if self.ehr[pid].get("story")}
         self.default_minute = self.story_minutes.get("BH-0001", self.end_minute)
+        self.upload_summary: dict[str, dict] = {}
+        self._load_uploads()
+
+    # ------------------------------------------------------------------ onboarding (uploaded patients)
+    def _register(self, pid: str, ehr: dict, minute: pd.DataFrame, meals: pd.DataFrame, feats: pd.DataFrame,
+                  preds: pd.DataFrame, params: np.ndarray, summary: dict):
+        for c in minute.columns:
+            if minute[c].dtype == np.float64:
+                minute[c] = minute[c].astype(np.float32)
+        num = feats.select_dtypes(np.float64).columns
+        feats[num] = feats[num].astype(np.float32)
+        if pid not in self.pids:
+            self.pids.append(pid)
+        self.ehr[pid], self.minute[pid], self.meals[pid] = ehr, minute, meals
+        self.feats[pid] = feats.sort_values("minute").reset_index(drop=True)
+        self.preds[pid] = preds.sort_values("minute").reset_index(drop=True)
+        self.twin_params[pid] = np.asarray(params, float)
+        self.fold_of[pid] = UPLOAD_FOLD
+        self.upload_summary[pid] = summary
+
+    def _load_uploads(self):
+        if not UPLOADS.exists():
+            return
+        for d in sorted(p for p in UPLOADS.iterdir() if p.is_dir()):
+            try:
+                with open(d / "ehr.json", encoding="utf-8") as f:
+                    ehr = json.load(f)
+                with open(d / "summary.json", encoding="utf-8") as f:
+                    summary = json.load(f)
+                self._register(d.name, ehr, pd.read_parquet(d / "minute.parquet"), pd.read_parquet(d / "meals.parquet"),
+                               pd.read_parquet(d / "feats.parquet"), pd.read_parquet(d / "preds.parquet"),
+                               np.load(d / "params.npy"), summary)
+            except (OSError, ValueError, KeyError):
+                continue  # skip incomplete uploads
+
+    def _next_upload_id(self) -> str:
+        nums = [int(p[3:]) for p in self.pids if p.startswith("UP-") and p[3:].isdigit()]
+        if UPLOADS.exists():
+            nums += [int(p.name[3:]) for p in UPLOADS.iterdir() if p.name.startswith("UP-") and p.name[3:].isdigit()]
+        return f"UP-{(max(nums) if nums else 0) + 1:04d}"
+
+    def onboard(self, profile: dict, csv_text: str) -> dict:
+        pid = self._next_upload_id()
+        r = onboarding.onboard(pid, profile, csv_text, self.models[UPLOAD_FOLD])
+        r["summary"]["replay_minute"] = self._replay_minute(r["preds"], r["summary"])
+        d = UPLOADS / pid
+        d.mkdir(parents=True, exist_ok=True)
+        r["minute"].to_parquet(d / "minute.parquet", index=False)
+        r["meals"].to_parquet(d / "meals.parquet", index=False)
+        r["feats"].to_parquet(d / "feats.parquet", index=False)
+        r["preds"].to_parquet(d / "preds.parquet", index=False)
+        np.save(d / "params.npy", r["params"])
+        with open(d / "ehr.json", "w", encoding="utf-8") as f:
+            json.dump(_clean(r["ehr"]), f, indent=1, ensure_ascii=False)
+        with open(d / "summary.json", "w", encoding="utf-8") as f:
+            json.dump(_clean(r["summary"]), f, indent=1)
+        self._register(pid, r["ehr"], r["minute"], r["meals"], r["feats"], r["preds"], r["params"], r["summary"])
+        return _clean({"patient_id": pid, "summary": r["summary"], "name": r["ehr"]["name"]})
+
+    @staticmethod
+    def _replay_minute(P: pd.DataFrame, s: dict) -> int:
+        """Where "Open twin" starts the replay: just before the first alert the model raises
+        after onboarding (hypo first, then hyper), so the clinician sees it as it happened."""
+        mon = P[(P["phase"] == "monitor") & (P["minute"] <= s["last_minute"] - 150)]
+        for col, thr, ahead in (("p_ev_hypo", HYPO_THR, mon["g0"] >= 85), ("p_ev_hyper", HYPER_THR, mon["g0"] < 170)):
+            hit = mon[(mon[col] >= thr) & ahead]  # raised ahead of the event, not during it
+            if len(hit):
+                return int(hit["minute"].iloc[0]) - 15
+        return int(max(s["first_minute"] + 240, s["last_minute"] - 180))
+
+    def delete_upload(self, pid: str) -> bool:
+        if not pid.startswith("UP-") or pid not in self.ehr:
+            return False
+        for store in (self.ehr, self.minute, self.meals, self.feats, self.preds, self.twin_params, self.fold_of, self.upload_summary):
+            store.pop(pid, None)
+        self.pids.remove(pid)
+        self._sync.cache_clear()
+        d = UPLOADS / pid
+        if d.exists():
+            for f in d.iterdir():
+                f.unlink()
+            d.rmdir()
+        return True
 
     # ------------------------------------------------------------------ helpers
     def twin(self, pid) -> DigitalTwin:
@@ -174,7 +259,7 @@ class TwinService:
             rows.append({
                 "patient_id": pid, "name": e["name"], "age": e["age"], "sex": e["sex"], "city": e["city"],
                 "group": e["group"], "group_label": GROUP_LABEL[e["group"]], "hba1c": e["hba1c"],
-                "regimen": [x["drug"] for x in e.get("regimen", [])], "featured": e.get("featured", False),
+                "regimen": [x["drug"] for x in e.get("regimen", [])], "featured": e.get("featured", False), "uploaded": bool(e.get("uploaded")),
                 "headline": e.get("headline"), "glucose": g0, "slope": float(f["cgm_d15"]) / 15.0,
                 "pred_60": float(r["pred_60"]), "p_hyper": p_hyper, "p_hypo": p_hypo, "p_spike": float(r["p_ev_spike"]),
                 "tir_7d": s7.get("tir"), "tbr_7d": s7.get("tbr"), "gmi_7d": s7.get("gmi"), "alerts_24h": alerts24,
@@ -201,12 +286,22 @@ class TwinService:
         e["phenotype"] = ph
         e["phenotype_percentile"] = pct
         e["fold"] = self.fold_of.get(pid)
-        e["data_sources"] = [
-            {"stream": "EHR", "detail": "Demographics, diagnoses (ICD-10/SNOMED), labs (LOINC), medications (ATC), genetics"},
-            {"stream": "CGM", "detail": "5-min interstitial glucose (simulated sensor with lag, noise and dropouts)"},
-            {"stream": "Smartwatch", "detail": "Heart rate (1-min), steps, METs, sleep stages, nightly HRV"},
-            {"stream": "Meal log", "detail": "Self-logged Indian meals with estimated macros (photo-log style)"},
-        ]
+        if e.get("uploaded"):
+            s = self.upload_summary.get(pid, {})
+            e["data_sources"] = [
+                {"stream": "EHR", "detail": "Entered by the clinician at onboarding"},
+                {"stream": "CGM", "detail": f"Uploaded CSV: {s.get('readings', '?')} readings over {s.get('days', '?')} days"},
+                {"stream": "Smartwatch", "detail": "Heart rate and steps from the upload" if s.get("has_heart_rate") or s.get("has_steps") else "Not provided"},
+                {"stream": "Meal log", "detail": f"{s.get('meals', 0)} meals from the upload"},
+            ]
+            e["upload_summary"] = s
+        else:
+            e["data_sources"] = [
+                {"stream": "EHR", "detail": "Demographics, diagnoses (ICD-10/SNOMED), labs (LOINC), medications (ATC), genetics"},
+                {"stream": "CGM", "detail": "5-min interstitial glucose (simulated sensor with lag, noise and dropouts)"},
+                {"stream": "Smartwatch", "detail": "Heart rate (1-min), steps, METs, sleep stages, nightly HRV"},
+                {"stream": "Meal log", "detail": "Self-logged Indian meals with estimated macros (photo-log style)"},
+            ]
         e["story_minute"] = self.story_minutes.get(pid)
         e["usual_foods"] = {slot: self._usual_food(pid, slot) for slot in ("breakfast", "lunch", "dinner")}
         return _clean(e)
@@ -390,6 +485,9 @@ class TwinService:
     def _usual_food(self, pid, slot):
         m = self.meals[pid]
         sub = m[m["meal_type"] == slot]
+        dish = sub["food_id"].map(lambda f: f in BY_ID and "drink" not in BY_ID[f]["slots"]) if "food_id" in sub else None
+        if dish is not None and dish.any():
+            sub = sub[dish]  # the meal itself, not the tea logged alongside it
         if len(sub) and "food_id" in sub:
             return sub["food_id"].mode().iloc[0]
         return {"lunch": "rice_sambar", "dinner": "roti_dal_sabzi", "breakfast": "idli_sambar"}.get(slot, "rice_sambar")
@@ -465,7 +563,7 @@ class TwinService:
             "patient": {"name": e["name"], "age": e["age"], "sex": e["sex"], "group_label": GROUP_LABEL[e["group"]],
                         "dm_years": e.get("diabetes_years"), "hba1c": e["hba1c"], "egfr": e.get("egfr"), "bmi": e.get("bmi"),
                         "vitamin_b12": e.get("vitamin_b12"), "regimen": e.get("regimen", []),
-                        "diagnoses": [d["display"] for d in e.get("diagnoses", [])], "synthetic": True},
+                        "diagnoses": [d["display"] for d in e.get("diagnoses", [])], "synthetic": not e.get("uploaded")},
             "now": {"time_label": pd.Timestamp(rk["time"]).strftime("%a %d %b, %H:%M"), "glucose": rk["glucose"], "slope": rk["slope"]},
             "forecast": rk["forecast"], "risks": {"hyper": rk["probabilities"]["hyper_2h"], "hypo": rk["probabilities"]["hypo_1h"],
                                                   "spike": rk["probabilities"]["spike_2h"]},

@@ -96,3 +96,21 @@ def test_clarke_zones():
 def test_drug_mapping(regimen, key):
     tw = DigitalTwin.from_ehr("x", {"hba1c": 7.5, "weight_kg": 70}, regimen)
     assert tw.params[M.P[key]] > 0
+
+
+def test_onboarding_reads_device_export():
+    from madhutwin.onboarding import parse_csv
+    # title line above the header, export column names, glucose in mmol/L
+    text = ("Glucose Data,Generated on,2026-10-14\n"
+            "Device,Serial Number,Device Timestamp,Record Type,Historic Glucose mmol/L\n"
+            "FreeStyle,X1,2026-10-05 07:00,0,6.1\n"
+            "FreeStyle,X1,2026-10-05 07:15,0,7.0\n")
+    df, info = parse_csv(text)
+    assert len(df) == 2 and info["unit"].startswith("mmol/L")
+    assert df["glucose"].iloc[0] == pytest.approx(6.1 * 18.016)
+
+
+def test_onboarding_matches_logged_meals_to_library():
+    from madhutwin.onboarding import _food_id
+    assert _food_id("Rajma chawal", "lunch", 85) == "rajma_chawal"
+    assert _food_id("lunch at office", "lunch", 85) in {"rice_sambar", "rajma_chawal"}  # closest-sized lunch dish

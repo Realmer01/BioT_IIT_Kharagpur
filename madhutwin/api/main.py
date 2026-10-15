@@ -5,6 +5,7 @@ Docs: http://localhost:8000/docs
 """
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -13,7 +14,9 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from madhutwin import onboarding
 from madhutwin.api.service import TwinService
+from madhutwin.config import DATA
 
 app = FastAPI(title="MadhuTwin API", version="1.0.0",
               description="Hybrid physiological-AI digital twin for type 2 diabetes (Digital Twin Challenge 2026).")
@@ -151,6 +154,67 @@ def foods():
 @app.get("/api/validation")
 def validation():
     return svc().validation()
+
+
+class Medication(BaseModel):
+    drug: str
+    dose: float = 0
+
+
+class Profile(BaseModel):
+    name: str = ""
+    age: float
+    sex: str = "M"
+    weight_kg: float
+    height_cm: float | None = None
+    hba1c: float
+    fpg: float | None = None
+    fasting_insulin: float | None = None
+    egfr: float | None = None
+    diabetes_years: float | None = None
+    sbp: float | None = None
+    dbp: float | None = None
+    city: str = ""
+    state: str = ""
+    language: str = ""
+    medications: list[Medication] = Field(default_factory=list)
+
+
+class OnboardRequest(BaseModel):
+    profile: Profile
+    csv: str = Field(..., description="CGM/wearable export as CSV text (see GET /api/onboard/format)")
+
+
+@app.post("/api/onboard")
+def onboard(req: OnboardRequest):
+    """Create a new patient: health-record form + CGM/wearable CSV -> personalised, scored twin."""
+    try:
+        return svc().onboard(req.profile.model_dump(), req.csv)
+    except onboarding.OnboardingError as e:
+        raise HTTPException(400, str(e)) from e
+
+
+@app.get("/api/onboard/format")
+def onboard_format():
+    return {"description": onboarding.__doc__, "drugs": sorted(onboarding.DRUGS)}
+
+
+@app.get("/api/onboard/sample")
+def onboard_sample():
+    """A fictional patient that none of the models has seen, in the documented CSV format."""
+    d = DATA / "samples"
+    if not (d / "sample_patient.csv").exists():
+        raise HTTPException(404, "Sample not generated; run scripts/make_sample_upload.py")
+    with open(d / "sample_profile.json", encoding="utf-8") as f:
+        profile = json.load(f)
+    return {"profile": profile, "csv": (d / "sample_patient.csv").read_text(encoding="utf-8"), "filename": "sample_patient.csv"}
+
+
+@app.delete("/api/patients/{pid}")
+def delete_patient(pid: str):
+    if not svc().delete_upload(pid):
+        raise HTTPException(400, "Only clinician-uploaded patients (UP-xxxx) can be removed")
+    return {"deleted": pid}
 
 
 # Serve the built dashboard (dashboard/dist) when present: one process for the whole demo.
