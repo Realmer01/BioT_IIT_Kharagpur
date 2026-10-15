@@ -1,5 +1,8 @@
 .git
-data/
+data/raw/
+data/processed/
+data/synthetic/
+data/uploaded/
 models/
 dashboard/node_modules
 dashboard/dist

@@ -15,6 +15,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY madhutwin/ madhutwin/
 COPY scripts/ scripts/
 COPY reports/ reports/
+COPY data/samples/ data/samples/
 COPY --from=web /app/dashboard/dist dashboard/dist
 # Demo build (~5-10 min): synthetic cohort + quick models. For the full real-data pipeline see README.
 RUN python scripts/build_bharat.py && python scripts/train_deploy.py --quick
