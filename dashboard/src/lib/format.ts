@@ -17,16 +17,17 @@ export function trend(slope: number) {
   return { arrow: "→", label: "steady" };
 }
 
+/** Consensus glucose ranges: `color` for marks, `ink` for text (AA contrast). */
 export function glucoseState(g: number) {
-  if (g < 54) return { label: "Very low", color: "var(--critical)" };
-  if (g < 70) return { label: "Low", color: "var(--critical)" };
-  if (g <= 180) return { label: "In range", color: "var(--good)" };
-  if (g <= 250) return { label: "High", color: "var(--warning)" };
-  return { label: "Very high", color: "var(--serious)" };
+  if (g < 54) return { label: "Very low", color: "var(--critical-deep)", ink: "var(--critical-ink)" };
+  if (g < 70) return { label: "Low", color: "var(--critical)", ink: "var(--critical-ink)" };
+  if (g <= 180) return { label: "In range", color: "var(--good)", ink: "var(--good-ink)" };
+  if (g <= 250) return { label: "High", color: "var(--warning)", ink: "var(--warning-ink)" };
+  return { label: "Very high", color: "var(--serious)", ink: "var(--serious-ink)" };
 }
 
 export const TIR_COLORS = {
-  tbr_l2: "#a82727", tbr_l1: "var(--critical)", tir: "var(--good)", tar_l1: "var(--warning)", tar_l2: "var(--serious)",
+  tbr_l2: "var(--critical-deep)", tbr_l1: "var(--critical)", tir: "var(--good)", tar_l1: "var(--warning)", tar_l2: "var(--serious)",
 };
 export const TIR_LABELS = {
   tbr_l2: "Very low <54", tbr_l1: "Low 54–69", tir: "In range 70–180", tar_l1: "High 181–250", tar_l2: "Very high >250",
