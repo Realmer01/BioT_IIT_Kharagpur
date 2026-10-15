@@ -10,7 +10,7 @@ MadhuTwin is designed so that a deployment can meet the DPDP Act's core obligati
 | Notice in a language the person understands (s.5) | Consent notice language is recorded per patient (Kannada, Tamil, Telugu, Hindi and others). |
 | Purpose limitation and data minimisation | The twin needs only CGM, basic wearable signals, meal logs and routine labs. No location, contacts or free-text notes are collected. |
 | Storage limitation | A retention period is recorded per patient. Raw streams can be summarised into the twin's parameters and AGP metrics after the retention window. |
-| Rights to access, correction and erasure (s.11–13) | Each record exports as a standard FHIR R4 bundle; the twin can be rebuilt or deleted from the source record. |
+| Rights to access, correction and erasure (s.11–13) | Each record exports as a standard FHIR R4 bundle; the twin can be rebuilt or deleted from the source record. A patient onboarded from an upload is stored only on the server that built the twin and is erased with one action from the patient page (record, streams, twin parameters and predictions). |
 | Security safeguards (s.8) | Deployment guidance: encryption in transit and at rest, role-based access for the care team, audit logs of who viewed which twin. |
 
 **Interoperability.** Records are exchanged as HL7 FHIR R4 bundles with LOINC, SNOMED CT, ICD-10 and WHO ATC codes, plus CGM summary codes from the HL7 CGM implementation guide. This is the same building block used by India's Ayushman Bharat Digital Mission (ABDM) health-information exchange.

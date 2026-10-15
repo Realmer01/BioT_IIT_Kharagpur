@@ -102,7 +102,8 @@ CGMs and smartwatches are becoming affordable, but clinicians receive raw data d
 | State sync | Every CGM sample corrects the virtual patient; unobserved insulin, gut glucose and exercise effects evolve through physiology. |
 | Hybrid ML | Gradient-boosted residual forecaster (30–120 min) over all streams plus the twin's forecast; conformal 90 % intervals; calibrated event risks; exact TreeSHAP explanations by stream. |
 | What-if | Batch counterfactual simulation of meals, portions, walks, sleep and medication changes, anchored to the ML forecast. |
-| Clinician dashboard | Triage, live twin with replay, alerts with reasons, ranked actions, what-if simulator, AGP report, coded record with FHIR export, copilot, evidence page. |
+| New-patient onboarding | A clinician enters a short health record and uploads a CGM/wearable CSV. The record sets the prior, the first part of the recording personalises the twin, and the rest is forecast and scored by models that have never seen the patient. |
+| Clinician dashboard | Triage, live twin with replay, alerts with reasons, ranked actions, what-if simulator, AGP report, coded record with FHIR export, copilot, new-patient onboarding, evidence page. |
 
 **Key results on real patients** (CGMacros, 45 adults, leave-patients-out; details in [§10](#10-results)):
 
@@ -263,6 +264,19 @@ For dashboard development, run `npm run dev` in `dashboard/` (port 5173, proxies
 
 **Using the dashboard:** pick a *Demo story* on the Clinic page, press **Replay** to advance the virtual clock, and watch the alert appear before the event. Tick *Reveal what happened* to compare the forecast with reality. The copilot runs offline; set `ANTHROPIC_API_KEY` to enable the optional hosted language-model engine.
 
+**Adding your own patient:** open **New patient**, fill in the health record (age, weight and HbA1c are required; other labs sharpen the prior), add the diabetes medicines and drop in a CSV of at least 24 hours of CGM readings. **Load sample patient** fills the page with a fictional patient that none of the models has seen ([data/samples/](data/samples/)). Building the twin takes a few seconds. The result shows what the recording taught the twin; on the sample, its own 2-hour error falls from 74 to 40 mg/dL. **Open twin** starts the replay just before the first alert raised after onboarding. Uploaded patients are saved under `data/uploaded/` (not versioned) and can be removed from their patient page.
+
+| CSV column | | Meaning |
+|---|---|---|
+| `timestamp` | required | date and time of the reading, e.g. `2026-10-05 07:35` |
+| `glucose_mgdl` | required | CGM glucose in mg/dL (mmol/L is detected and converted) |
+| `heart_rate` | optional | beats per minute |
+| `steps` | optional | steps from this row's time until the next row |
+| `carbs_g` | optional | grams of carbohydrate, on the row where a meal starts |
+| `protein_g`, `fat_g`, `fiber_g`, `meal` | optional | meal detail and name (names are matched to the Indian food library) |
+
+Column names are case-insensitive, and the names used by common CGM exports (for example `Device Timestamp` and `Historic Glucose mg/dL`) are recognised. The recording is moved by whole days onto the clinic's 14-day timeline, so times of day are kept. The same flow is available as `POST /api/onboard`.
+
 ## 14. Reproducing the results
 
 ```bash
@@ -288,10 +302,12 @@ madhutwin/
   ml/           models.py (hybrid forecaster, CQR, classifiers, SHAP), metrics.py (Clarke grid, episodes)
   api/          main.py (FastAPI), service.py (triage, timeline, alerts, what-if, recommendations)
   twin.py       DigitalTwin: create, personalise, sync, forecast, what-if, phenotype
+  onboarding.py new patient from a health record + CGM/wearable CSV (parse, personalise, score)
   features.py   causal, stream-tagged features      agp.py  consensus CGM metrics and AGP
   copilot.py    grounded clinical summary           explain_text.py  plain-language explanations
 dashboard/      React + TypeScript clinician dashboard
-scripts/        download, build, evaluate, train, figures, report
+scripts/        download, build, evaluate, train, figures, report, sample upload
+data/samples/   fictional sample upload for the New patient page
 reports/        metrics (*.json) and figures
 docs/           presentation, architecture, data, privacy and safety, validation report, screenshots
 tests/          physiology, causality (look-ahead), metrics, API
