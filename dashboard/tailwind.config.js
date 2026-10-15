@@ -1,3 +1,9 @@
+// Colours are CSS variables (light/dark tokens in index.css). Opacity modifiers such as
+// bg-card/95 are resolved with color-mix so they work on variables too.
+const v = (name) => ({ opacityValue } = {}) =>
+  opacityValue === undefined || String(opacityValue).startsWith("var(") ? `var(${name})`
+    : `color-mix(in srgb, var(${name}) calc(${opacityValue} * 100%), transparent)`;
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
@@ -5,24 +11,24 @@ export default {
   theme: {
     extend: {
       colors: {
-        page: "var(--page)",
-        card: "var(--card)",
-        surface: "var(--surface-1)",
-        ink: "var(--ink)",
-        ink2: "var(--ink-2)",
-        muted: "var(--muted)",
-        line: "var(--grid)",
-        axis: "var(--axis)",
-        brand: "var(--brand)",
-        brandsoft: "var(--brand-soft)",
-        onbrand: "var(--onbrand)",
-        s1: "var(--s1)",
-        s2: "var(--s2)",
-        s3: "var(--s3)",
-        good: "var(--good)",
-        warning: "var(--warning)",
-        serious: "var(--serious)",
-        critical: "var(--critical)",
+        page: v("--page"),
+        card: v("--card"),
+        surface: v("--surface-1"),
+        ink: v("--ink"),
+        ink2: v("--ink-2"),
+        muted: v("--muted"),
+        line: v("--grid"),
+        axis: v("--axis"),
+        brand: v("--brand"),
+        brandsoft: v("--brand-soft"),
+        onbrand: v("--onbrand"),
+        s1: v("--s1"),
+        s2: v("--s2"),
+        s3: v("--s3"),
+        good: v("--good"),
+        warning: v("--warning"),
+        serious: v("--serious"),
+        critical: v("--critical"),
       },
       fontFamily: { sans: ['system-ui', '-apple-system', '"Segoe UI"', 'Roboto', 'sans-serif'] },
       borderColor: { DEFAULT: "var(--border)" },
