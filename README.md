@@ -9,6 +9,8 @@ MadhuTwin fuses a patient's **static health record** (demographics, diagnoses, l
 
 *Madhu* comes from *madhumeha*, the classical Indian name for diabetes.
 
+**Team BioT** · Anish Karthik Ayyagari · IIT Kharagpur · Digital Twin Challenge 2026
+
 ![Clinician view of a patient's twin: an afternoon hypoglycaemia flagged ahead of time, with reasons and the evidence by data stream](docs/img/patient_hypo.png)
 
 | | |
@@ -41,6 +43,8 @@ MadhuTwin fuses a patient's **static health record** (demographics, diagnoses, l
 ---
 
 ## 1. Team details
+
+**Team name:** BioT
 
 Solo entry: one team member, who is also the team leader.
 
