@@ -19,7 +19,7 @@ MadhuTwin fuses a patient's **static health record** (demographics, diagnoses, l
 | Presentation | [PDF](docs/Presentation.pdf) · [PPTX](docs/Presentation.pptx) |
 | Architecture diagram | [PDF](docs/Architecture.pdf) · [PPTX](docs/Architecture.pptx) |
 | Full validation results | [docs/VALIDATION_REPORT.md](docs/VALIDATION_REPORT.md) |
-| Run it | [Quick start](#13-quick-start) (Docker, one command) |
+| Run it | [Quick start](#13-quick-start) (five commands, or Docker) |
 
 ---
 
@@ -240,16 +240,7 @@ The video covers the problem, how the twin works, a live walkthrough of the dash
 
 ## 13. Quick start
 
-**Docker (recommended, about 10 minutes the first time):**
-
-```bash
-docker compose up --build
-# open http://localhost:8000
-```
-
-The image builds the dashboard, generates the Bharat synthetic cohort and trains demo models. The Evidence page shows the committed real-data results.
-
-**Manual:**
+Requires Python 3.12 and Node.js 18 or later.
 
 ```bash
 pip install -r requirements.txt
@@ -259,6 +250,10 @@ python scripts/train_deploy.py --quick  # demo models (~10 min); omit --quick fo
 uvicorn madhutwin.api.main:app --port 8000
 # open http://localhost:8000   (API docs at /docs)
 ```
+
+The Evidence page shows the committed real-data results, so no download is needed to run the demo.
+
+**Docker (alternative):** `docker compose up --build`, then open http://localhost:8000. The image runs the same steps: it builds the dashboard, generates the cohort and trains the demo models (about 10 minutes the first time).
 
 For dashboard development, run `npm run dev` in `dashboard/` (port 5173, proxies `/api` to port 8000).
 
