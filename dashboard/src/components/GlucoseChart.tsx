@@ -61,7 +61,7 @@ export default function GlucoseChart({ tl, showFuture, showTrack, showTwin, heig
                 {`${SLOT[ml.slot] ?? "Meal"} ${Math.round(ml.carbs)}g`}
               </text>) : undefined} />
         ))}
-        <ReferenceLine x={now} stroke="var(--ink)" strokeWidth={1.25} label={{ value: "NOW", position: "top", fill: "var(--ink)", fontSize: 10, fontWeight: 700, letterSpacing: 0.8 }} />
+        <ReferenceLine x={now} stroke="var(--ink)" strokeWidth={1.25} label={{ value: "Now", position: "top", fill: "var(--ink)", fontSize: 11, fontWeight: 600 }} />
         <Area dataKey="band" stroke="none" fill="var(--s2)" fillOpacity={0.16} isAnimationActive={false} connectNulls name="90% interval" />
         {showTwin && <Line dataKey="twin" stroke="var(--ink-2)" strokeDasharray="2 3" strokeWidth={2} dot={false} isAnimationActive={false} name="Physiology only" />}
         {showTrack && <Line dataKey="track" stroke="var(--s3)" strokeDasharray="5 4" strokeWidth={2} dot={false} isAnimationActive={false} connectNulls name="Forecast made 60 min earlier" />}
@@ -79,10 +79,10 @@ function Tip({ active, payload, label }: { active?: boolean; payload?: any[]; la
   const r: Row = payload[0].payload;
   const line = (name: string, v?: number, c?: string) => v == null ? null : (
     <div className="flex justify-between gap-4"><span className="flex items-center gap-1.5 text-ink2">
-      <span className="h-2 w-2 rounded-full" style={{ background: c }} />{name}</span><span className="tnum font-semibold text-ink">{Math.round(v)}</span></div>
+      <span className="h-2 w-2" style={{ background: c }} />{name}</span><span className="tnum font-semibold text-ink">{Math.round(v)}</span></div>
   );
   return (
-    <div className="card min-w-[200px] px-3 py-2.5 text-xs shadow-pop">
+    <div className="panel min-w-[200px] px-3 py-2 text-xs shadow-pop">
       <div className="mb-1.5 font-semibold text-ink">{fmtTime(new Date(label!))}</div>
       {line("CGM", r.cgm, "var(--s1)")}
       {line("Forecast", r.pred, "var(--s2)")}

@@ -8,7 +8,7 @@ const ORDER = ["tar_l2", "tar_l1", "tir", "tbr_l1", "tbr_l2"] as const;
 export function TirBar({ s, height = 220 }: { s: AgpSummary; height?: number }) {
   return (
     <div className="flex items-stretch gap-3" style={{ height }}>
-      <div className="flex w-8 flex-col gap-[2px] overflow-hidden rounded-[5px]">
+      <div className="flex w-7 flex-col gap-[2px] overflow-hidden">
         {ORDER.map((k) => (
           <div key={k} title={`${TIR_LABELS[k]}: ${s[k].toFixed(1)}%`} style={{ flexGrow: Math.max(s[k], 0.6), background: TIR_COLORS[k] }} />
         ))}
@@ -16,7 +16,7 @@ export function TirBar({ s, height = 220 }: { s: AgpSummary; height?: number }) 
       <ul className="flex flex-col justify-between py-0.5 text-xs">
         {ORDER.map((k) => (
           <li key={k} className="flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-sm" style={{ background: TIR_COLORS[k] }} />
+            <span className="h-2.5 w-2.5" style={{ background: TIR_COLORS[k] }} />
             <span className="w-28 text-ink2">{TIR_LABELS[k]}</span>
             <span className="tnum font-semibold text-ink">{s[k].toFixed(1)}%</span>
           </li>
@@ -45,7 +45,7 @@ export function AgpChart({ agp, height = 260 }: { agp: Agp; height?: number }) {
           const r: any = payload[0].payload;
           const hh = `${String(Math.floor(r.m / 60)).padStart(2, "0")}:${String(r.m % 60).padStart(2, "0")}`;
           return (
-            <div className="card px-3 py-2.5 text-xs shadow-pop">
+            <div className="panel px-3 py-2 text-xs shadow-pop">
               <div className="font-semibold">{hh}</div>
               <div>Median <b className="tnum">{Math.round(r.p50)}</b></div>
               <div className="text-ink2">IQR {Math.round(r.iqr[0])}–{Math.round(r.iqr[1])} · 5–95% {Math.round(r.outer[0])}–{Math.round(r.outer[1])}</div>
@@ -63,7 +63,7 @@ export function DailyTir({ agp }: { agp: Agp }) {
     <div className="flex items-end gap-1.5 overflow-x-auto pb-1">
       {agp.daily.map((d) => (
         <div key={d.date} className="flex w-9 shrink-0 flex-col items-center gap-1">
-          <div className="flex h-28 w-3.5 flex-col gap-[2px] overflow-hidden rounded-[3px]" title={`${d.date}: TIR ${d.tir.toFixed(0)}%`}>
+          <div className="flex h-28 w-3.5 flex-col gap-[2px] overflow-hidden" title={`${d.date}: TIR ${d.tir.toFixed(0)}%`}>
             {ORDER.map((k) => <div key={k} style={{ flexGrow: Math.max(d[k], 0.0001), background: TIR_COLORS[k] }} />)}
           </div>
           <span className="tnum text-[10px] text-ink2">{d.tir.toFixed(0)}%</span>

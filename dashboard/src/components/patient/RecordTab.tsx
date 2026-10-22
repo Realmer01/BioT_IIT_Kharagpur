@@ -1,4 +1,3 @@
-import { Download } from "lucide-react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { getJSON, type Patient } from "../../lib/api";
 import { useClock } from "../../lib/clock";
@@ -8,9 +7,7 @@ type Flag = "High" | "Low" | null;
 type Lab = [string, number | string | null | undefined, string, (v: number) => Flag];
 const hi = (bad: boolean): Flag => (bad ? "High" : null);
 const lo = (bad: boolean): Flag => (bad ? "Low" : null);
-const flag = (f: Flag) => (f ? (
-  <span className="inline-flex items-center gap-1 rounded bg-criticalsoft px-1.5 py-px text-[10.5px] font-semibold text-criticalink">{f === "High" ? "▲" : "▼"} {f}</span>
-) : null);
+const flag = (f: Flag) => (f ? <span className="text-xs font-semibold text-criticalink">{f}</span> : null);
 
 export default function RecordTab({ p }: { p: Patient }) {
   const { minute } = useClock();
@@ -80,7 +77,7 @@ export default function RecordTab({ p }: { p: Patient }) {
               <tr key={name}>
                 <td className="pl-5 text-ink2">{name}</td>
                 <td className="num whitespace-nowrap font-semibold text-ink">{v == null ? <span className="font-normal text-faint">not recorded</span> : v}</td>
-                <td className="w-[76px] whitespace-nowrap px-0">{v == null ? null : flag(check(typeof v === "number" ? v : 0))}</td>
+                <td className="w-[52px] whitespace-nowrap px-0">{v == null ? null : flag(check(typeof v === "number" ? v : 0))}</td>
                 <td className="pr-5 text-xs text-muted">{ref}</td>
               </tr>
             ))}
@@ -97,7 +94,7 @@ export default function RecordTab({ p }: { p: Patient }) {
                 allowDecimals={false} tickFormatter={(v) => `${v}%`} />
               <ReferenceLine y={7} stroke="var(--axis)" strokeDasharray="4 3" />
               <Line dataKey="v" stroke="var(--s1)" strokeWidth={2} dot={{ r: 3.5, fill: "var(--s1)", stroke: "var(--card)", strokeWidth: 2 }} isAnimationActive={false} />
-              <Tooltip content={({ active, payload }) => active && payload?.length ? <div className="card px-2.5 py-1.5 text-xs shadow-pop">{payload[0].payload.d}: <b>{payload[0].payload.v}%</b></div> : null} />
+              <Tooltip content={({ active, payload }) => active && payload?.length ? <div className="panel px-2.5 py-1.5 text-xs shadow-pop">{payload[0].payload.d}: <b>{payload[0].payload.v}%</b></div> : null} />
             </LineChart>
           </ResponsiveContainer>
         </Card>
@@ -110,7 +107,7 @@ export default function RecordTab({ p }: { p: Patient }) {
           </dl>
         </Card>
         <Card title="Consent, privacy and interoperability"
-          right={<button onClick={exportFhir} className="btn-primary"><Download size={14} />Export FHIR R4 bundle</button>}>
+          right={<button onClick={exportFhir} className="btn-secondary">Export FHIR R4 bundle</button>}>
           <dl className="space-y-2 text-xs leading-relaxed text-ink2">
             <div><dt className="inline font-semibold text-ink">Purpose · </dt><dd className="inline">{p.consent.purpose} (granted {p.consent.granted}; DPDP notice in {p.consent.dpdp_notice_language})</dd></div>
             <div><dt className="inline font-semibold text-ink">Shared with · </dt><dd className="inline">{p.consent.data_shared_with.join(", ")} · retention {p.consent.retention_days} days</dd></div>

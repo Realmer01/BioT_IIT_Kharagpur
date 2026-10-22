@@ -1,4 +1,3 @@
-import { ArrowLeft, FileHeart, FlaskRound, LineChart, MessageSquareText, ShieldCheck, SlidersHorizontal, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import AgpTab from "../components/patient/AgpTab";
@@ -10,14 +9,13 @@ import { Badge, Note, Tabs } from "../components/ui";
 import { useFetch, type Patient } from "../lib/api";
 
 type Tab = "live" | "whatif" | "agp" | "record" | "copilot";
-const ICON = { size: 15, strokeWidth: 1.8 };
 
 export default function PatientPage() {
   const { pid = "" } = useParams();
   const { data: p } = useFetch<Patient>(`/api/patients/${pid}`);
   const [tab, setTab] = useState<Tab>("live");
   const nav = useNavigate();
-  if (!p) return <div className="py-20 text-center text-muted">Loading twin…</div>;
+  if (!p) return <div className="py-20 text-center text-muted">Loading patient…</div>;
   const show = (v: number | null) => (v == null ? "–" : `${v}`);
   const years = (y: number) => (y < 1 ? `${Math.max(1, Math.round(y * 12))} months` : `${y.toFixed(0)} year${y.toFixed(0) === "1" ? "" : "s"}`);
   const remove = async () => {
@@ -39,45 +37,36 @@ export default function PatientPage() {
   ].filter(Boolean);
   return (
     <div className="space-y-5">
-      <div className="card px-5 pb-4 pt-4">
-        <div>
-          <div className="flex min-w-0 items-start gap-3.5">
-            <Link to={"/" + location.search} className="btn-icon -ml-1.5 mt-1" title="Back to clinic"><ArrowLeft size={17} strokeWidth={1.8} /></Link>
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border bg-surface font-serif text-[17px] font-semibold text-ink">
-              {p.name.split(" ").map((x) => x[0]).slice(0, 2).join("")}
+      <div>
+        <Link to={"/" + location.search} className="text-[13px] text-muted hover:text-ink">← Remote monitoring</Link>
+        <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h1 className="text-[22px] leading-tight text-ink">{p.name}</h1>
+          <span className="font-mono text-[13px] text-muted">{p.patient_id}</span>
+          <Badge tone={p.uploaded ? "brand" : "neutral"}>{p.uploaded ? "Uploaded data" : "Synthetic patient"}</Badge>
+          <Badge>DPDP consent on file</Badge>
+        </div>
+        <div className="mt-1 text-[13.5px] text-ink2">{meta.join(" · ")}</div>
+        <div className="mt-0.5 text-[13px] text-muted">{p.diagnoses.map((d) => d.display.replace(">=", "≥")).join(" · ")}</div>
+
+        <dl className="mt-4 flex flex-wrap border-y py-2.5">
+          {figures.map(([k, v, u]) => (
+            <div key={k} className="mr-8 py-0.5">
+              <dt className="text-xs text-muted">{k}</dt>
+              <dd className="whitespace-nowrap"><span className="text-[16px] font-semibold text-ink">{v}</span>{u && v !== "–" && <span className="ml-1 text-xs text-muted">{u}</span>}</dd>
             </div>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-baseline gap-x-2.5">
-                <h1 className="display text-[26px] leading-tight text-ink">{p.name}</h1>
-                <span className="font-mono text-xs text-muted">{p.patient_id}</span>
-              </div>
-              <div className="mt-0.5 text-[13px] text-ink2">{meta.join(" · ")}</div>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                <Badge tone={p.uploaded ? "brand" : "neutral"}>{p.uploaded ? "Uploaded data" : "Synthetic patient"}</Badge>
-                <Badge><ShieldCheck size={11} strokeWidth={2} className="shrink-0" />DPDP consent on file</Badge>
-                {p.diagnoses.slice(0, 4).map((d) => <Badge key={d.code}>{d.display.replace(">=", "≥")}</Badge>)}
-              </div>
-            </div>
+          ))}
+          <div className="py-0.5">
+            <dt className="text-xs text-muted">Medications</dt>
+            <dd className="text-[14px] text-ink">{rx.length ? rx.join(" · ") : "None (lifestyle management)"}
+              {p.other_medications.length > 0 && <span className="text-muted"> · also {p.other_medications.map((r) => r.drug).join(", ")}</span>}</dd>
           </div>
-          <dl className="mt-4 grid grid-cols-3 gap-px overflow-hidden rounded-lg border bg-[var(--border)] sm:grid-cols-6">
-            {figures.map(([k, v, u]) => (
-              <div key={k} className="bg-surface px-4 py-2.5">
-                <dt className="whitespace-nowrap text-[11px] text-muted">{k}</dt>
-                <dd className="mt-0.5 whitespace-nowrap"><span className="text-[16px] font-semibold text-ink">{v}</span>{u && v !== "–" && <span className="ml-0.5 text-[11px] text-muted">{u}</span>}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-        <div className="mt-3.5 border-t pt-3 text-[13px] text-ink2">
-          <span className="label mr-2 text-[10.5px]">Medications</span>{rx.length ? rx.join(" · ") : "none (lifestyle management)"}
-          {p.other_medications.length > 0 && <span className="text-muted"> · also {p.other_medications.map((r) => r.drug).join(", ")}</span>}
-        </div>
+        </dl>
         {(p.headline || (p.uploaded && p.upload_summary)) && (
           <div className="mt-3 space-y-2">
-            {p.headline && <Note label="Demo story">{p.headline.replace(" -> ", " → ")}</Note>}
+            {p.headline && <Note label="Demo story.">{p.headline.replace(" -> ", ", ")}.</Note>}
             {p.uploaded && p.upload_summary && (
-              <Note tone="brand" label="Uploaded"
-                right={<button onClick={remove} className="btn-ghost h-7 px-2 text-xs hover:text-criticalink"><Trash2 size={13} />Remove patient</button>}>
+              <Note label="Uploaded record."
+                right={<button onClick={remove} className="btn-secondary h-7 px-2.5 text-xs hover:border-critical hover:text-criticalink">Remove patient</button>}>
                 {p.upload_summary.readings.toLocaleString()} CGM readings over {p.upload_summary.days} days and {p.upload_summary.meals} meals.
                 Personalised on the first {Math.round(p.upload_summary.onboard_hours)} h; everything after that is forecast by a model that never saw this patient.
               </Note>
@@ -87,11 +76,8 @@ export default function PatientPage() {
       </div>
 
       <Tabs<Tab> value={tab} onChange={setTab} tabs={[
-        { id: "live", label: "Live twin", icon: <LineChart {...ICON} /> },
-        { id: "whatif", label: "What-if simulator", icon: <SlidersHorizontal {...ICON} /> },
-        { id: "agp", label: "AGP report", icon: <FileHeart {...ICON} /> },
-        { id: "record", label: "Health record", icon: <FlaskRound {...ICON} /> },
-        { id: "copilot", label: "Copilot", icon: <MessageSquareText {...ICON} /> },
+        { id: "live", label: "Live twin" }, { id: "whatif", label: "What-if" }, { id: "agp", label: "AGP report" },
+        { id: "record", label: "Health record" }, { id: "copilot", label: "Copilot" },
       ]} />
       {tab === "live" && <LiveTab p={p} />}
       {tab === "whatif" && <WhatIfTab p={p} />}

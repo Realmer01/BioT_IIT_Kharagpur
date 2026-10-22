@@ -26,7 +26,7 @@ export default function WearableStrips({ tl }: { tl: Timeline }) {
   const hasSleep = rows.some((r) => r.sleep != null);
   const strip = (title: string, child: JSX.Element, h = 64) => (
     <div>
-      <div className="label mb-1 pl-1 text-[10.5px]">{title}</div>
+      <div className="label mb-1 pl-1">{title}</div>
       <ResponsiveContainer width="100%" height={h}>{child}</ResponsiveContainer>
     </div>
   );
@@ -71,5 +71,5 @@ function Tip({ active, payload, label, unit, k }: { active?: boolean; payload?: 
   const v = payload[0].payload[k];
   if (v == null) return null;
   const text = k === "sleep" ? SLEEP_NAME[v] : `${Math.round(v)} ${unit}`;
-  return <div className="card px-2.5 py-1.5 text-xs shadow-pop"><span className="text-muted">{fmtTime(new Date(label!))}</span> · <b>{text}</b></div>;
+  return <div className="panel px-2.5 py-1.5 text-xs shadow-pop"><span className="text-muted">{fmtTime(new Date(label!))}</span> · <b>{text}</b></div>;
 }

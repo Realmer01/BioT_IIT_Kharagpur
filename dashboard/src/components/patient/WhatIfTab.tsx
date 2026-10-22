@@ -1,5 +1,4 @@
 import clsx from "clsx";
-import { Plus, Sparkles, X } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { CartesianGrid, Line, LineChart, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { getJSON, postJSON, type Food, type Patient, type Recommendations, type WhatIf } from "../../lib/api";
@@ -84,24 +83,25 @@ export default function WhatIfTab({ p }: { p: Patient }) {
 
   return (
     <div className="space-y-5">
-      <Card title="What-if simulator" subtitle={`The next four hours from ${fmtDateTime(timeOf(minute))}, simulated on this patient's personalised twin. A baseline and up to three alternatives.`}
-        right={<button onClick={suggest} className="btn-secondary"><Sparkles size={14} strokeWidth={1.8} />Twin suggestions</button>}>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <Card title="Scenarios" divider pad={false}
+        subtitle={`Next four hours from ${fmtDateTime(timeOf(minute))}, simulated on this patient's personalised twin. The first scenario is the baseline.`}
+        right={<button onClick={suggest} className="btn-secondary">Suggest scenarios</button>}>
+        <div className="flex divide-x overflow-x-auto">
           {sc.map((s, i) => (
-            <div key={i} className="rounded-lg border bg-surface p-3.5">
+            <div key={i} className="min-w-[250px] flex-1 p-4">
               <div className="mb-3 flex items-center gap-2">
-                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: COLORS[i] }} />
+                <i className="inline-block h-2.5 w-2.5 shrink-0" style={{ background: COLORS[i] }} />
                 <input value={s.label} onChange={(e) => set(i, { label: e.target.value })} aria-label="Scenario name"
-                  className="min-w-0 flex-1 rounded bg-transparent text-[13.5px] font-semibold text-ink outline-none focus:bg-card" />
-                {i === 0 ? <span className="label text-[10px]">Baseline</span>
-                  : <button onClick={() => setSc((x) => x.filter((_, j) => j !== i))} className="btn-icon h-6 w-6" title="Remove scenario"><X size={14} /></button>}
+                  className="min-w-0 flex-1 rounded border border-transparent bg-transparent px-1 text-[14px] font-semibold text-ink outline-none hover:border-strong focus:border-brand" />
+                {i === 0 ? <span className="text-xs text-muted">Baseline</span>
+                  : <button onClick={() => setSc((x) => x.filter((_, j) => j !== i))} className="text-xs text-muted hover:text-criticalink" title="Remove scenario">Remove</button>}
               </div>
               <Field label="Meal">
                 <select value={s.food} onChange={(e) => set(i, { food: e.target.value })} className="input input-sm">
                   <option value="">No meal</option>
                   {options.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
                 </select>
-                {(() => { const f = foods.find((x) => x.id === s.food); return f ? <div className="mt-1 text-[11px] text-muted">{f.carbs} g carbohydrate · GI {f.gi} · {f.kcal} kcal</div> : null; })()}
+                {(() => { const f = foods.find((x) => x.id === s.food); return f ? <div className="mt-1 text-[11.5px] text-muted">{f.carbs} g carbohydrate · GI {f.gi} · {f.kcal} kcal</div> : null; })()}
               </Field>
               <Slider label="Portion" v={s.portion} min={0.5} max={1.5} step={0.25} fmt={(v) => `${v}×`} on={(v) => set(i, { portion: v })} />
               <Slider label="Meal starts in" v={s.mealMin} min={0} max={180} step={5} fmt={(v) => `${v} min`} on={(v) => set(i, { mealMin: v })} />
@@ -122,32 +122,33 @@ export default function WhatIfTab({ p }: { p: Patient }) {
             </div>
           ))}
           {sc.length < 4 && (
-            <button onClick={() => setSc((x) => [...x, { ...x[0], label: `Alternative ${x.length}` }])}
-              className="flex min-h-[140px] flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-strong text-[13px] text-muted transition-colors hover:border-brand hover:text-ink">
-              <Plus size={18} strokeWidth={1.6} />Add alternative
-            </button>
+            <div className="flex w-[170px] shrink-0 items-center justify-center p-4">
+              <button onClick={() => setSc((x) => [...x, { ...x[0], label: `Alternative ${x.length}` }])} className="btn-secondary">Add scenario</button>
+            </div>
           )}
         </div>
       </Card>
 
       {sugg && (
-        <Card title="Twin suggestions" subtitle={`Interventions the twin evaluated automatically, ranked against ${sugg.baseline.label.toLowerCase()}`}
+        <Card title="Suggested scenarios" divider pad={false} subtitle={`Evaluated automatically on the twin and ranked against ${sugg.baseline.label.toLowerCase()}`}
           right={<button onClick={() => setSugg(null)} className="btn-ghost h-7 px-2 text-xs">Close</button>}>
-          <ol className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
-            {sugg.recommendations.slice(0, 6).map((r, i) => {
-              const hypo = r.kind === "hypo";
-              const d = hypo ? r.delta_tbr_min : r.delta_tar_min;
-              return (
-                <li key={r.label} className="flex items-start gap-2.5 rounded-lg border px-3.5 py-2.5">
-                  <span className={clsx("mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full font-serif text-[12px] font-semibold", i === 0 ? "bg-brand text-onbrand" : "border text-ink2")}>{i + 1}</span>
-                  <div className="text-xs leading-snug">
-                    <div className="text-[13px] font-medium text-ink">{r.label}</div>
-                    <div className="mt-0.5 text-muted">{hypo ? `time below 70: ${d > 0 ? "+" : ""}${d} min · lowest ${Math.round(r.min)}` : `time above 180: ${d > 0 ? "+" : ""}${d} min · peak ${r.delta_peak > 0 ? "+" : ""}${Math.round(r.delta_peak)} mg/dL`}</div>
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
+          <table className="data-table">
+            <thead><tr><th className="w-8 pl-4">#</th><th>Intervention</th><th className="num">Change in time out of range</th><th className="num pr-4">Peak or lowest</th></tr></thead>
+            <tbody>
+              {sugg.recommendations.slice(0, 6).map((r, i) => {
+                const hypo = r.kind === "hypo";
+                const d = hypo ? r.delta_tbr_min : r.delta_tar_min;
+                return (
+                  <tr key={r.label}>
+                    <td className="pl-4 text-muted">{i + 1}</td>
+                    <td className="text-ink">{r.label}</td>
+                    <td className="num" style={{ color: d < 0 ? "var(--good-ink)" : "var(--ink-2)" }}>{d > 0 ? "+" : ""}{d} min {hypo ? "below 70" : "above 180"}</td>
+                    <td className="num pr-4 text-ink2">{hypo ? `lowest ${Math.round(r.min)}` : `peak ${r.delta_peak > 0 ? "+" : ""}${Math.round(r.delta_peak)}`} mg/dL</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </Card>
       )}
 
@@ -167,7 +168,7 @@ export default function WhatIfTab({ p }: { p: Patient }) {
                   strokeDasharray={j === 0 ? "6 4" : undefined} dot={false} isAnimationActive={false} />
               ))}
               <Tooltip content={({ active, payload, label }) => !active || !payload?.length ? null : (
-                <div className="card min-w-[180px] px-3 py-2.5 text-xs shadow-pop">
+                <div className="panel min-w-[180px] px-3 py-2 text-xs shadow-pop">
                   <div className="mb-1.5 font-semibold text-ink">{fmtTime(timeOf(minute + Number(label)))} <span className="font-normal text-muted">(+{label} min)</span></div>
                   {payload.map((pp: any) => <div key={pp.dataKey} className="flex justify-between gap-4"><span className="text-ink2">{pp.name}</span><b className="text-ink">{Math.round(pp.value)}</b></div>)}
                 </div>
@@ -177,11 +178,11 @@ export default function WhatIfTab({ p }: { p: Patient }) {
         </div>
         {res && <div className="mt-2"><Legend items={res.scenarios.map((s, j) => ({ label: s.label, color: COLORS[j], dash: j === 0 }))} /></div>}
         {res && base && (
-          <div className="-mx-5 mt-4 overflow-x-auto border-t">
+          <div className="-mx-4 mt-4 overflow-x-auto border-t">
             <table className="data-table min-w-[680px]">
               <thead><tr>
-                <th className="pl-5">Scenario</th><th className="num">Peak</th><th className="num">Lowest</th>
-                <th className="num">Time above 180</th><th className="num">Time below 70</th><th className="num">Mean</th><th className="num pr-5">Compared with baseline</th>
+                <th className="pl-4">Scenario</th><th className="num">Peak</th><th className="num">Lowest</th>
+                <th className="num">Time above 180</th><th className="num">Time below 70</th><th className="num">Mean</th><th className="num pr-4">Compared with baseline</th>
               </tr></thead>
               <tbody>
                 {res.scenarios.map((s, j) => {
@@ -191,11 +192,11 @@ export default function WhatIfTab({ p }: { p: Patient }) {
                   const sign = (v: number) => (v > 0 ? `+${v}` : `${v}`);
                   return (
                     <tr key={j}>
-                      <td className="pl-5 font-medium text-ink"><span className="mr-2 inline-block h-2 w-2 rounded-full" style={{ background: COLORS[j] }} />{s.label}</td>
+                      <td className="pl-4 font-medium text-ink"><span className="mr-2 inline-block h-2 w-2" style={{ background: COLORS[j] }} />{s.label}</td>
                       <td className="num">{Math.round(s.peak)}</td><td className="num">{Math.round(s.min)}</td>
                       <td className="num">{s.time_above_180_min} min</td><td className="num">{s.time_below_70_min} min</td>
                       <td className="num">{Math.round(s.mean)}</td>
-                      <td className="num pr-5 font-medium" style={{ color: j === 0 ? "var(--muted)" : dm < 0 || d < 0 ? "var(--good-ink)" : "var(--ink-2)" }}>
+                      <td className="num pr-4 font-medium" style={{ color: j === 0 ? "var(--muted)" : dm < 0 || d < 0 ? "var(--good-ink)" : "var(--ink-2)" }}>
                         {j === 0 ? "baseline" : `peak ${sign(dp)} · mean ${sign(dm)} · ${sign(d)} min above 180`}
                       </td>
                     </tr>
@@ -205,7 +206,7 @@ export default function WhatIfTab({ p }: { p: Patient }) {
             </table>
           </div>
         )}
-        <p className="mt-0 border-t pt-2.5 text-[11px] leading-snug text-muted">Machine learning sets the expected path; the patient's calibrated physiology computes how each change would alter it. Estimates for shared decision-making, not prescriptions.</p>
+        <p className="-mx-4 -mb-4 border-t px-4 py-2 text-[11.5px] leading-snug text-muted">Machine learning sets the expected path; the patient's calibrated physiology computes how each change would alter it. Estimates for shared decision-making, not prescriptions.</p>
       </Card>
     </div>
   );
@@ -214,7 +215,7 @@ export default function WhatIfTab({ p }: { p: Patient }) {
 function Field({ label, children, last }: { label: string; children: ReactNode; last?: boolean }) {
   return (
     <div className={last ? "" : "mb-3"}>
-      <div className="mb-1 text-[11px] font-medium text-muted">{label}</div>
+      <div className="mb-1 text-xs text-muted">{label}</div>
       {children}
     </div>
   );
@@ -223,7 +224,7 @@ function Field({ label, children, last }: { label: string; children: ReactNode; 
 function Slider({ label, v, min, max, step, fmt, on }: { label: string; v: number; min: number; max: number; step: number; fmt: (v: number) => string; on: (v: number) => void }) {
   return (
     <div className="mb-2.5">
-      <div className="flex justify-between text-[11px]"><span className="font-medium text-muted">{label}</span><span className="font-semibold text-ink">{fmt(v)}</span></div>
+      <div className="flex justify-between text-xs"><span className="text-muted">{label}</span><span className="font-medium text-ink">{fmt(v)}</span></div>
       <input type="range" min={min} max={max} step={step} value={v} onChange={(e) => on(Number(e.target.value))} className="w-full" />
     </div>
   );

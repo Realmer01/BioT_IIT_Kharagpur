@@ -3,7 +3,7 @@ import {
   Bar, BarChart, CartesianGrid, Cell, LabelList, Line, LineChart, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart,
   Tooltip, XAxis, YAxis, ZAxis,
 } from "recharts";
-import { Card, Legend, Note, PageHeader, Stats } from "../components/ui";
+import { Card, Legend, Note, PageHeader } from "../components/ui";
 import { useFetch } from "../lib/api";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -13,7 +13,7 @@ const MAIN = "MadhuTwin hybrid";
 
 export default function Validation() {
   const { data } = useFetch<Any>("/api/validation");
-  if (!data?.metrics_cgmacros) return <div className="py-20 text-center text-muted">Loading evidence…</div>;
+  if (!data?.metrics_cgmacros) return <div className="py-20 text-center text-muted">Loading validation…</div>;
   const m = data.metrics_cgmacros;
   const reg = m.regression;
   const rm = (name: string, h: string) => reg[name]?.[h]?.rmse;
@@ -22,20 +22,31 @@ export default function Validation() {
   const ep = m.episodes[MAIN];
   const cov = m.intervals["120"];
   return (
-    <div className="space-y-6">
-      <PageHeader eyebrow="Evidence · real patients" title="Does the twin work?">
-        Validated on CGMacros (PhysioNet): {m.dataset.participants} adults ({m.dataset.groups.normal} normoglycaemic,
-        {" "}{m.dataset.groups.prediabetes} with prediabetes, {m.dataset.groups.t2d} with type 2 diabetes) wearing a CGM and a Fitbit, with meal logs and labs.
-        Five-fold leave-patients-out cross-validation: the ML layer never sees a test patient, and each test patient's twin is personalised only on
-        their first days. Every metric comes from the later, unseen monitoring period ({Math.round(m.dataset.monitored_days)} patient-days,
-        {" "}{m.dataset.test_rows.toLocaleString()} forecasts).
-      </PageHeader>
-      <Stats className="grid-cols-1 sm:grid-cols-2 xl:grid-cols-4" items={[
-        { label: "Two-hour forecast error (RMSE)", value: rm(MAIN, "120").toFixed(1), unit: "mg/dL", sub: `${(gain * 100).toFixed(0)} % lower than persistence (${rm("Persistence", "120").toFixed(1)})` },
-        { label: "Hyperglycaemia early warning", value: ev.auroc.toFixed(2), unit: "AUROC", sub: `median lead ${Math.round(ep.median_lead_min)} min · ${(ep.episode_sensitivity * 100).toFixed(0)} % of episodes flagged ≥15 min ahead` },
-        { label: "Clinically acceptable forecasts", value: reg[MAIN]["120"].clarke_ab.toFixed(1), unit: "%", sub: "Clarke error grid zones A and B at 2 h" },
-        { label: "Calibrated uncertainty", value: (cov.coverage * 100).toFixed(1), unit: "%", sub: "observed coverage of the 90 % interval at 2 h" },
-      ]} />
+    <div className="space-y-5">
+      <PageHeader title="Validation" meta={`CGMacros (PhysioNet) · ${m.dataset.participants} adults · five-fold leave-patients-out · ${m.dataset.test_rows.toLocaleString()} forecasts on unseen patients`} />
+      <p className="max-w-4xl text-[13.5px] leading-relaxed text-ink2">
+        {m.dataset.participants} adults ({m.dataset.groups.normal} normoglycaemic, {m.dataset.groups.prediabetes} with prediabetes, {m.dataset.groups.t2d} with type 2 diabetes)
+        wore a CGM and a Fitbit and logged meals and labs. The machine-learning layer never sees a test patient, and each test patient's twin is personalised
+        only on their first days. Every figure below comes from the later, unseen monitoring period ({Math.round(m.dataset.monitored_days)} patient-days).
+      </p>
+      <Card title="Key results" divider pad={false}>
+        <div className="overflow-x-auto">
+          <table className="data-table min-w-[720px]">
+            <thead><tr><th className="pl-4">Measure</th><th className="num">MadhuTwin</th><th className="num">Comparator</th><th className="pr-4">Note</th></tr></thead>
+            <tbody>
+              <tr><td className="pl-4 text-ink">Two-hour forecast error (RMSE)</td><td className="num font-semibold text-ink">{rm(MAIN, "120").toFixed(1)} mg/dL</td>
+                <td className="num text-ink2">{rm("Persistence", "120").toFixed(1)} mg/dL, persistence</td><td className="pr-4 text-ink2">{(gain * 100).toFixed(0)} % lower error</td></tr>
+              <tr><td className="pl-4 text-ink">Clinically acceptable two-hour forecasts (Clarke A+B)</td><td className="num font-semibold text-ink">{reg[MAIN]["120"].clarke_ab.toFixed(1)} %</td>
+                <td className="num text-ink2">{reg.Persistence["120"].clarke_ab.toFixed(1)} %, persistence</td><td className="pr-4 text-ink2">zone A alone {reg[MAIN]["120"].clarke_a.toFixed(1)} %</td></tr>
+              <tr><td className="pl-4 text-ink">Hyperglycaemia early warning (AUROC)</td><td className="num font-semibold text-ink">{ev.auroc.toFixed(2)}</td>
+                <td className="num text-ink2">{m.events.ev_hyper["EHR only"].auroc.toFixed(2)}, record only</td>
+                <td className="pr-4 text-ink2">{(ep.episode_sensitivity * 100).toFixed(0)} % of episodes flagged at least 15 min ahead; median lead {Math.round(ep.median_lead_min)} min</td></tr>
+              <tr><td className="pl-4 text-ink">Coverage of the 90 % prediction interval at two hours</td><td className="num font-semibold text-ink">{(cov.coverage * 100).toFixed(1)} %</td>
+                <td className="num text-ink2">90 % nominal</td><td className="pr-4 text-ink2">calibrated by conformal quantile regression</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
       <div className="grid gap-5 xl:grid-cols-2">
         <HorizonCard reg={reg} cond={m.regression_conditional} />
@@ -53,8 +64,8 @@ export default function Validation() {
         <PhysiologyCard m={m} />
         {data.metrics_bharat && <SyntheticCard b={data.metrics_bharat} />}
       </div>
-      <Card title="Limitations we report openly">
-        <ul className="dot-list grid gap-x-8 gap-y-2 text-[13px] leading-relaxed text-ink2 md:grid-cols-2">
+      <Card title="Limitations">
+        <ul className="bullets grid gap-x-8 gap-y-1.5 text-[13px] leading-relaxed text-ink2 md:grid-cols-2">
           <li>The real cohort is small (45 adults, ~10 days each) and from the USA; Indian validation with prospective data is the next step.</li>
           <li>On rolling forecasts, adding the twin's features to the ML layer did not measurably improve accuracy over the best fusion model; the twin's value is counterfactual simulation, interpretable physiology, day-zero personalisation from the EHR and better meal-response prediction.</li>
           <li>Static EHR features add little to short-term forecasts once CGM is available; their benefit appears through the twin's prior (cold start) and in baseline risk (EHR-only AUROC {m.events.ev_hyper["EHR only"].auroc.toFixed(2)}).</li>
@@ -85,7 +96,7 @@ function HorizonCard({ reg, cond }: { reg: Any; cond?: Any }) {
     return { v, off };
   }, null as null | { v: number; off: number });
   return (
-    <Card title="Forecast error by horizon" subtitle="RMSE on unseen patients (lower is better). Table lists every model.">
+    <Card title="Figure 1. Forecast error by horizon" subtitle="RMSE on unseen patients, lower is better; the table lists every model">
       <ResponsiveContainer width="100%" height={230}>
         <LineChart data={rows} margin={{ top: 8, right: 70, bottom: 0, left: -10 }}>
           <CartesianGrid stroke="var(--grid)" vertical={false} />
@@ -100,17 +111,17 @@ function HorizonCard({ reg, cond }: { reg: Any; cond?: Any }) {
         </LineChart>
       </ResponsiveContainer>
       <Legend items={series.map((s) => ({ label: s.name, color: s.color }))} />
-      <div className="-mx-5 mt-4 overflow-x-auto border-y">
+      <div className="-mx-4 mt-4 overflow-x-auto border-y">
         <table className="data-table text-xs">
-          <thead><tr><th className="pl-5">Model</th>{H.map((h) => <th key={h} className="num">{h} min</th>)}<th className="num pr-5">Clarke A+B, 2 h</th></tr></thead>
+          <thead><tr><th className="pl-4">Model</th>{H.map((h) => <th key={h} className="num">{h} min</th>)}<th className="num pr-4">Clarke A+B, 2 h</th></tr></thead>
           <tbody>{all.map((n) => (
-            <tr key={n} className={n === MAIN ? "font-semibold text-ink" : "text-ink2"}><td className="py-1.5 pl-5">{n}</td>{H.map((h) => <td key={h} className="num py-1.5">{reg[n][h].rmse.toFixed(1)}</td>)}<td className="num py-1.5 pr-5">{reg[n]["120"].clarke_ab.toFixed(1)}%</td></tr>
+            <tr key={n} className={n === MAIN ? "font-semibold text-ink" : "text-ink2"}><td className="py-1.5 pl-4">{n}</td>{H.map((h) => <td key={h} className="num py-1.5">{reg[n][h].rmse.toFixed(1)}</td>)}<td className="num py-1.5 pr-4">{reg[n]["120"].clarke_ab.toFixed(1)}%</td></tr>
           ))}</tbody>
         </table>
       </div>
       {cond && (
-        <div className="mt-4"><Note tone="brand" label="Deployed">
-          Forecaster conditional on no new food, scored on meal-free windows:{" "}
+        <div className="mt-4"><Note label="Deployed forecaster.">
+          Conditional on no new food and scored on meal-free windows:{" "}
           2-hour RMSE {cond[`${MAIN} [conditional]`]["120"].rmse.toFixed(1)} vs {cond.Persistence["120"].rmse.toFixed(1)} mg/dL for persistence
           and {cond["Fusion (streams + EHR)"]["120"].rmse.toFixed(1)} for the unconditional fusion model. New meals are added by the twin's simulation.
         </Note></div>
@@ -136,10 +147,10 @@ function AblationCard({ m }: { m: Any }) {
     </ResponsiveContainer>
   );
   return (
-    <Card title="What each data stream adds" subtitle="Same patients, same rows; only the inputs change">
-      <div className="eyebrow mb-1">Hyperglycaemia-onset prediction, AUROC (higher is better)</div>
+    <Card title="Figure 2. What each data stream adds" subtitle="Same patients and rows; only the inputs change">
+      <div className="label mb-1">Hyperglycaemia-onset prediction, AUROC (higher is better)</div>
       {bar(auc, (v) => v.toFixed(3), [0.5, 0.9])}
-      <div className="eyebrow mb-1 mt-3">1-hour forecast RMSE, mg/dL (lower is better)</div>
+      <div className="label mb-1 mt-3">One-hour forecast RMSE, mg/dL (lower is better)</div>
       {bar(rmse, (v) => v.toFixed(1), [0, 30])}
       <p className="mt-2 text-xs text-ink2">The static record alone identifies who is at risk (AUROC {auc[0].v.toFixed(2)}); live streams decide <i>when</i>. Fusing both gives the best early warning, and the twin layer keeps accuracy while adding simulation and physiology.</p>
     </Card>
@@ -154,7 +165,7 @@ const CLARKE: [number, number, number, number][] = [
 function ClarkeCard({ pts, reg }: { pts: number[][]; reg: Any }) {
   const data = useMemo(() => pts.map(([y, p]) => ({ x: Math.min(y, 400), y: Math.min(Math.max(p, 0), 400) })), [pts]);
   return (
-    <Card title="Clarke error grid: 2-hour forecasts" subtitle={`Random sample of ${data.length.toLocaleString()} forecasts from unseen patients · zone A ${reg.clarke_a.toFixed(1)} %, A+B ${reg.clarke_ab.toFixed(1)} %`}>
+    <Card title="Figure 3. Clarke error grid, two-hour forecasts" subtitle={`Random sample of ${data.length.toLocaleString()} forecasts from unseen patients · zone A ${reg.clarke_a.toFixed(1)} %, A+B ${reg.clarke_ab.toFixed(1)} %`}>
       <ResponsiveContainer width="100%" height={320}>
         <ScatterChart margin={{ top: 8, right: 16, bottom: 14, left: 0 }}>
           <CartesianGrid stroke="var(--grid)" />
@@ -176,35 +187,35 @@ function ClarkeCard({ pts, reg }: { pts: number[][]; reg: Any }) {
 function WarningCard({ m }: { m: Any }) {
   const sets = ["EHR only", "CGM only", "Wearable streams", "Fusion (streams + EHR)", MAIN];
   return (
-    <Card title="Early warning of hyperglycaemia (>180 mg/dL)" subtitle="Episode-level evaluation on unseen patients; alert threshold 0.5">
-      <div className="-mx-5 overflow-x-auto border-y">
+    <Card title="Table 1. Early warning of hyperglycaemia above 180 mg/dL" subtitle="Episode-level evaluation on unseen patients; alert threshold 0.5">
+      <div className="-mx-4 overflow-x-auto border-y">
       <table className="data-table text-xs [&_td]:px-2.5 [&_th]:px-2.5">
         <thead><tr>
-          <th className="!pl-5">Inputs</th><th className="num">AUROC</th><th className="num">AUPRC</th>
-          <th className="num">Flagged ≥15 min</th><th className="num">Median lead</th><th className="num !pr-5">False/day</th>
+          <th className="!pl-4">Inputs</th><th className="num">AUROC</th><th className="num">AUPRC</th>
+          <th className="num">Flagged ≥15 min</th><th className="num">Median lead</th><th className="num !pr-4">False/day</th>
         </tr></thead>
         <tbody>{sets.map((s) => {
           const e = m.events.ev_hyper[s]; const p = m.episodes[s];
           return (
             <tr key={s} className={s === MAIN ? "font-semibold text-ink" : "text-ink2"}>
-              <td className="!pl-5">{s}</td><td className="num">{e.auroc.toFixed(3)}</td><td className="num">{e.auprc.toFixed(3)}</td>
+              <td className="!pl-4">{s}</td><td className="num">{e.auroc.toFixed(3)}</td><td className="num">{e.auprc.toFixed(3)}</td>
               <td className="num">{(p.episode_sensitivity * 100).toFixed(0)}%</td><td className="num">{Math.round(p.median_lead_min)} min</td>
-              <td className="num !pr-5">{p.false_alerts_per_day.toFixed(2)}</td>
+              <td className="num !pr-4">{p.false_alerts_per_day.toFixed(2)}</td>
             </tr>
           );
         })}</tbody>
       </table>
       </div>
-      <div className="mt-4 grid gap-px overflow-hidden rounded-lg border bg-[var(--border)] sm:grid-cols-3">
+      <div className="mt-4 grid gap-px overflow-hidden rounded border bg-[var(--border)] sm:grid-cols-3">
         {["ev_spike", "ev_hypo"].map((k) => (
-          <div key={k} className="bg-surface px-3.5 py-2.5">
-            <div className="text-[11px] text-muted">{k === "ev_spike" ? "Spike of +50 mg/dL in 2 h" : "Hypoglycaemia below 70 in 1 h"}</div>
-            <div className="display mt-0.5 text-[22px] leading-tight">{m.events[k][MAIN].auroc.toFixed(2)} <span className="font-sans text-xs font-normal text-ink2">AUROC</span></div>
+          <div key={k} className="bg-card px-3.5 py-2.5">
+            <div className="text-xs text-muted">{k === "ev_spike" ? "Spike of +50 mg/dL in 2 h" : "Hypoglycaemia below 70 in 1 h"}</div>
+            <div className="mt-0.5 text-[18px] font-semibold leading-tight text-ink">{m.events[k][MAIN].auroc.toFixed(2)} <span className="text-xs font-normal text-muted">AUROC</span></div>
           </div>
         ))}
-        <div className="bg-surface px-3.5 py-2.5">
-          <div className="text-[11px] text-muted">90 % interval coverage</div>
-          <div className="display mt-0.5 whitespace-nowrap text-[20px] leading-tight">{H.map((h) => (m.intervals[h].coverage * 100).toFixed(0)).join(" · ")}<span className="font-sans text-xs font-normal text-ink2"> %</span></div>
+        <div className="bg-card px-3.5 py-2.5">
+          <div className="text-xs text-muted">90 % interval coverage</div>
+          <div className="mt-0.5 whitespace-nowrap text-[18px] font-semibold leading-tight text-ink">{H.map((h) => (m.intervals[h].coverage * 100).toFixed(0)).join(" · ")}<span className="text-xs font-normal text-muted"> %</span></div>
           <div className="text-[11px] text-muted">at 30 · 60 · 90 · 120 min</div>
         </div>
       </div>
@@ -217,7 +228,7 @@ function MealCard({ m, pts }: { m: Any; pts: number[][] }) {
   const rows = Object.entries(models).map(([k, v]: Any) => ({ s: k, v: v.pearson_r }));
   const sc = pts.map(([y, p]) => ({ x: y, y: p }));
   return (
-    <Card title="Personal meal-response prediction" subtitle={`Peak glucose rise within 2 h of ${m.meal_ppgr.n_meals_test} unseen meals (cf. Zeevi et al., Cell 2015)`}>
+    <Card title="Figure 4. Personal meal-response prediction" subtitle={`Peak glucose rise within 2 h of ${m.meal_ppgr.n_meals_test} unseen meals (cf. Zeevi et al., Cell 2015)`}>
       <div className="grid gap-3 md:grid-cols-2">
         <ResponsiveContainer width="100%" height={220}>
           <ScatterChart margin={{ top: 8, right: 8, bottom: 14, left: 0 }}>
@@ -229,7 +240,7 @@ function MealCard({ m, pts }: { m: Any; pts: number[][] }) {
           </ScatterChart>
         </ResponsiveContainer>
         <div>
-          <div className="eyebrow mb-1">Pearson r, predicted vs actual</div>
+          <div className="label mb-1">Pearson r, predicted against actual</div>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={rows} layout="vertical" margin={{ top: 0, right: 40, bottom: 0, left: 0 }} barCategoryGap={6}>
               <XAxis type="number" domain={[-0.2, 0.8]} hide />
@@ -253,7 +264,7 @@ function ColdStartCard({ tv }: { tv: Any }) {
   const days = [0, 0.5, 1, 2, 4];
   const rows = days.map((d) => ({ d, ehr: t[`EHR prior|${d.toFixed(1)}`]?.rmse_120, pop: t[`Population prior|${d.toFixed(1)}`]?.rmse_120 }));
   return (
-    <Card title="Where the health record matters: day-zero personalisation" subtitle="Twin-only 2-hour RMSE on later days vs days of onboarding data">
+    <Card title="Figure 5. Day-zero personalisation from the health record" subtitle="Twin-only 2-hour RMSE on later days vs days of onboarding data">
       <ResponsiveContainer width="100%" height={220}>
         <LineChart data={rows} margin={{ top: 8, right: 40, bottom: 4, left: -10 }}>
           <CartesianGrid stroke="var(--grid)" vertical={false} />
@@ -278,17 +289,17 @@ function PhysiologyCard({ m }: { m: Any }) {
     ["Twin basal glucose vs lab fasting glucose", t.gb_vs_fpg_spearman],
   ];
   return (
-    <Card title="Is the twin's physiology plausible?" subtitle="Spearman correlation across the 45 real participants (sign as physiology predicts)">
+    <Card title="Table 2. Plausibility of the personalised physiology" subtitle="Spearman correlation across the 45 real participants (sign as physiology predicts)">
       <ul className="space-y-2">
         {items.map(([k, v]) => (
-          <li key={k as string} className="flex items-center justify-between rounded-lg border bg-surface px-3.5 py-2.5 text-[13px]">
+          <li key={k as string} className="flex items-center justify-between border-b border-[var(--grid)] py-2 text-[13px] last:border-0">
             <span className="text-ink2">{k}</span><span className="font-semibold text-ink">ρ = {(v as number).toFixed(2)}</span>
           </li>
         ))}
       </ul>
       <div className="mt-3 grid grid-cols-4 gap-2 text-center">
         {["30", "60", "90", "120"].map((h) => (
-          <div key={h} className="rounded-lg border px-2 py-2">
+          <div key={h} className="rounded border px-2 py-2">
             <div className="text-[11px] text-muted">{h} min</div>
             <div className="mt-0.5 text-[13px]"><span className="text-faint line-through">{t.prior_rmse[h].toFixed(0)}</span> <span className="text-faint">→</span> <b className="text-ink">{t.personalised_rmse[h].toFixed(0)}</b></div>
           </div>
@@ -303,8 +314,8 @@ function SyntheticCard({ b }: { b: Any }) {
   const r = b.regression;
   const hy = b.episodes_hypo_by_threshold?.["0.25"] ?? b.episodes_hypo?.[MAIN];
   return (
-    <Card title="Bharat synthetic cohort (synthetic data)" subtitle={`${b.n_patients} fictional Indian patients, held out by fold; adds sulfonylurea/insulin hypoglycaemia, sleep and step streams`}>
-      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-[var(--border)]">
+    <Card title="Table 3. Synthetic Indian cohort (Bharat)" subtitle={`${b.n_patients} fictional Indian patients, held out by fold; adds sulfonylurea/insulin hypoglycaemia, sleep and step streams`}>
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded border bg-[var(--border)]">
         <Mini label="2-h RMSE" v={`${r[MAIN]["120"].rmse.toFixed(1)}`} s={`persistence ${r.Persistence["120"].rmse.toFixed(1)}`} />
         <Mini label="Hypo AUROC (1 h)" v={b.events.ev_hypo[MAIN].auroc?.toFixed(2)} s={`prevalence ${(b.events.ev_hypo[MAIN].prevalence * 100).toFixed(1)} %`} />
         <Mini label="Hypo episodes flagged ≥10 min ahead (alert ≥25 %)" v={hy ? `${(hy.episode_sensitivity * 100).toFixed(0)} %` : "–"} s={hy ? `${hy.detected_ge15min}/${hy.episodes} · lead ${Math.round(hy.median_lead_min)} min · ${hy.false_alerts_per_day.toFixed(2)} false/day` : ""} />
@@ -316,5 +327,5 @@ function SyntheticCard({ b }: { b: Any }) {
 }
 
 function Mini({ label, v, s }: { label: string; v?: string; s?: string }) {
-  return <div className="bg-surface px-3.5 py-2.5"><div className="text-[11px] leading-snug text-muted">{label}</div><div className="display mt-1 text-[22px] leading-tight">{v}</div><div className="mt-0.5 text-[11px] leading-snug text-ink2">{s}</div></div>;
+  return <div className="bg-card px-3.5 py-2.5"><div className="text-xs leading-snug text-muted">{label}</div><div className="mt-1 text-[18px] font-semibold leading-tight text-ink">{v}</div><div className="mt-0.5 text-xs leading-snug text-muted">{s}</div></div>;
 }

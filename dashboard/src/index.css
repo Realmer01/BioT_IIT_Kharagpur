@@ -3,34 +3,30 @@
 @tailwind utilities;
 
 /* Design tokens
-   Type: Newsreader (display), Inter (interface), IBM Plex Mono (clinical codes).
-   Neutrals are warm paper with navy ink; honey is the brand accent and is used
-   for marks and labels only. Status colours follow medical-alarm convention
-   (IEC 60601-1-8: red = high priority, yellow = medium, cyan = low) and always
-   ship with a text label. Data colours keep the validated categorical order
-   (s1-s3 pass all-pairs colour-vision checks in both modes). Text tokens meet
-   WCAG AA (4.5:1) on every surface they are used on. */
+   Type: IBM Plex Sans for the interface, IBM Plex Mono for readouts, IDs and codes.
+   Neutral, cool canvas; navy is the only brand colour and marks actions and selection.
+   Colour otherwise carries meaning: clinical state follows medical-alarm priority
+   (IEC 60601-1-8: red high, yellow medium, cyan low) and is always labelled, and the
+   data series keep the validated categorical order (s1-s3). Text tokens meet WCAG AA. */
 :root {
   color-scheme: light;
-  --page: #f6f5f1;
+  --page: #ffffff;
   --card: #ffffff;
-  --surface-1: #faf9f6;
-  --sidebar: #fbfaf7;
-  --ink: #141c2b;
-  --ink-2: #4a5260;
-  --muted: #676d78;
-  --faint: #9aa0a9;
-  --grid: #ece9e3;
-  --axis: #c9c5bc;
-  --border: #e6e3dc;
-  --border-strong: #d6d2c9;
-  --brand: #14213d;
-  --brand-hover: #23345c;
-  --brand-soft: #edf0f5;
+  --surface-1: #f7f8fa;
+  --sidebar: #f5f6f8;
+  --hover: #ebedf0;
+  --ink: #111820;
+  --ink-2: #3e4753;
+  --muted: #5f6774;
+  --faint: #9aa1ab;
+  --grid: #eef0f3;
+  --axis: #c5cad1;
+  --border: #e3e6ea;
+  --border-strong: #cdd2d9;
+  --brand: #13294b;
+  --brand-hover: #1d3a66;
+  --brand-soft: #e8ecf2;
   --onbrand: #ffffff;
-  --accent: #b97a12;
-  --accent-ink: #8a5a0b;
-  --accent-soft: #fbf4e6;
   --s1: #2a78d6;
   --s2: #eb6834;
   --s3: #1baf7a;
@@ -49,33 +45,31 @@
   --critical: #c8312b;
   --critical-ink: #a8261f;
   --critical-soft: #fcecea;
-  --band: rgba(46, 158, 91, 0.075);
-  --shadow-pop: 0 12px 32px -12px rgba(20, 28, 43, 0.28), 0 2px 6px rgba(20, 28, 43, 0.06);
-  --shadow-card: 0 1px 2px rgba(20, 28, 43, 0.04);
-  --ring: 0 0 0 3px rgba(20, 33, 61, 0.14);
+  --row-alarm: #fdf3f2;
+  --band: rgba(46, 158, 91, 0.07);
+  --shadow-pop: 0 8px 24px -8px rgba(17, 24, 32, 0.22), 0 1px 3px rgba(17, 24, 32, 0.08);
+  --ring: 0 0 0 3px rgba(19, 41, 75, 0.14);
 }
 @media (prefers-color-scheme: dark) {
   :root:where(:not([data-theme="light"])) {
     color-scheme: dark;
-    --page: #0b1019;
-    --card: #111824;
-    --surface-1: #151d2a;
-    --sidebar: #0d131d;
-    --ink: #e9edf3;
-    --ink-2: #aeb7c4;
-    --muted: #8c97a7;
-    --faint: #5e6878;
-    --grid: #1b2431;
-    --axis: #3a4556;
-    --border: #222c3a;
-    --border-strong: #2e3a4b;
-    --brand: #dce4f0;
-    --brand-hover: #ffffff;
-    --brand-soft: #1a2434;
-    --onbrand: #0b1019;
-    --accent: #e7b04b;
-    --accent-ink: #e7b04b;
-    --accent-soft: #2a2214;
+    --page: #0f1216;
+    --card: #151a20;
+    --surface-1: #1a2027;
+    --sidebar: #12161b;
+    --hover: #1c2129;
+    --ink: #e7eaee;
+    --ink-2: #b4bcc6;
+    --muted: #8d96a2;
+    --faint: #5d6672;
+    --grid: #20262e;
+    --axis: #3a424d;
+    --border: #262d36;
+    --border-strong: #343c47;
+    --brand: #c9d6ea;
+    --brand-hover: #e2e9f4;
+    --brand-soft: #1d2530;
+    --onbrand: #0f1216;
     --s1: #3987e5;
     --s2: #d95926;
     --s3: #199e70;
@@ -94,33 +88,31 @@
     --critical: #f0645c;
     --critical-ink: #f59c95;
     --critical-soft: #3a1716;
+    --row-alarm: #2a1715;
     --band: rgba(76, 195, 138, 0.08);
-    --shadow-pop: 0 16px 40px -12px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.3);
-    --shadow-card: none;
-    --ring: 0 0 0 3px rgba(220, 228, 240, 0.18);
+    --shadow-pop: 0 12px 32px -10px rgba(0, 0, 0, 0.7), 0 1px 3px rgba(0, 0, 0, 0.4);
+    --ring: 0 0 0 3px rgba(201, 214, 234, 0.18);
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --page: #0b1019;
-  --card: #111824;
-  --surface-1: #151d2a;
-  --sidebar: #0d131d;
-  --ink: #e9edf3;
-  --ink-2: #aeb7c4;
-  --muted: #8c97a7;
-  --faint: #5e6878;
-  --grid: #1b2431;
-  --axis: #3a4556;
-  --border: #222c3a;
-  --border-strong: #2e3a4b;
-  --brand: #dce4f0;
-  --brand-hover: #ffffff;
-  --brand-soft: #1a2434;
-  --onbrand: #0b1019;
-  --accent: #e7b04b;
-  --accent-ink: #e7b04b;
-  --accent-soft: #2a2214;
+  --page: #0f1216;
+  --card: #151a20;
+  --surface-1: #1a2027;
+  --sidebar: #12161b;
+  --hover: #1c2129;
+  --ink: #e7eaee;
+  --ink-2: #b4bcc6;
+  --muted: #8d96a2;
+  --faint: #5d6672;
+  --grid: #20262e;
+  --axis: #3a424d;
+  --border: #262d36;
+  --border-strong: #343c47;
+  --brand: #c9d6ea;
+  --brand-hover: #e2e9f4;
+  --brand-soft: #1d2530;
+  --onbrand: #0f1216;
   --s1: #3987e5;
   --s2: #d95926;
   --s3: #199e70;
@@ -139,10 +131,10 @@
   --critical: #f0645c;
   --critical-ink: #f59c95;
   --critical-soft: #3a1716;
+  --row-alarm: #2a1715;
   --band: rgba(76, 195, 138, 0.08);
-  --shadow-pop: 0 16px 40px -12px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.3);
-  --shadow-card: none;
-  --ring: 0 0 0 3px rgba(220, 228, 240, 0.18);
+  --shadow-pop: 0 12px 32px -10px rgba(0, 0, 0, 0.7), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --ring: 0 0 0 3px rgba(201, 214, 234, 0.18);
 }
 
 @layer base {
@@ -150,61 +142,57 @@
   body {
     background: var(--page);
     color: var(--ink);
-    font-family: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-family: "IBM Plex Sans Variable", "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     font-size: 14px;
     line-height: 1.5;
-    font-optical-sizing: auto;
     font-variant-numeric: tabular-nums; /* live numbers never shift while the clock replays */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
   }
-  ::selection { background: var(--accent-soft); color: var(--ink); }
-  :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 4px; }
-  code, kbd { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.92em; }
-  h1, h2, h3 { text-wrap: balance; }
+  h1, h2, h3 { font-weight: 600; letter-spacing: -0.01em; }
+  ::selection { background: var(--brand-soft); color: var(--ink); }
+  :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 3px; }
+  code, kbd, .mono { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.92em; }
   /* single-column grids shrink with the viewport instead of growing to their content */
   .grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 @layer components {
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-card); }
-  .eyebrow { font-size: 11px; line-height: 16px; letter-spacing: 0.09em; text-transform: uppercase; font-weight: 600; color: var(--accent-ink); }
-  .label { font-size: 11px; line-height: 16px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600; color: var(--muted); }
-  .display { font-family: "Newsreader Variable", Georgia, "Times New Roman", serif; font-weight: 500; letter-spacing: -0.015em; font-variant-numeric: lining-nums tabular-nums; }
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 6px; }
+  .label { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--muted); }
 
-  .btn { @apply inline-flex h-8 shrink-0 select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 text-[13px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40; }
+  .btn { @apply inline-flex h-8 shrink-0 select-none items-center justify-center gap-1.5 whitespace-nowrap rounded px-3 text-[13px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40; }
   .btn-primary { @apply btn bg-brand text-onbrand hover:bg-brandhover; }
   .btn-secondary { @apply btn border border-strong bg-card text-ink hover:bg-surface; }
-  .btn-ghost { @apply btn text-ink2 hover:bg-page hover:text-ink; }
-  .btn-icon { @apply inline-flex h-8 w-8 items-center justify-center rounded-md text-ink2 transition-colors hover:bg-page hover:text-ink; }
+  .btn-ghost { @apply btn text-ink2 hover:bg-surface hover:text-ink; }
+  .btn-icon { @apply inline-flex h-8 w-8 items-center justify-center rounded text-ink2 transition-colors hover:bg-surface hover:text-ink; }
+  .link { @apply font-medium text-brand underline decoration-[var(--border-strong)] underline-offset-2 hover:decoration-current; }
 
-  .input { @apply h-9 w-full rounded-md border border-strong bg-card px-3 text-sm text-ink outline-none transition-shadow placeholder:text-faint; }
+  .input { @apply h-9 w-full rounded border border-strong bg-card px-2.5 text-sm text-ink outline-none transition-shadow placeholder:text-faint; }
   .input:focus { border-color: var(--brand); box-shadow: var(--ring); }
   .input-sm { @apply h-8 text-[13px]; }
   select.input {
     appearance: none;
-    padding-right: 2rem;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23878c94' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    padding-right: 1.9rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a919c' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 0.65rem center;
+    background-position: right 0.6rem center;
   }
 
-  .segmented { @apply inline-flex items-center rounded-md border bg-surface p-0.5; }
-  .segmented > button { @apply rounded-[5px] px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:text-ink; }
-  .segmented > button[aria-pressed="true"] { @apply bg-card font-semibold text-ink; box-shadow: 0 1px 2px rgba(20, 28, 43, 0.1), 0 0 0 1px var(--border); }
+  .segmented { @apply inline-flex items-stretch overflow-hidden rounded border border-strong bg-card; }
+  .segmented > button { @apply border-l border-strong px-2.5 py-1 text-xs font-medium text-ink2 transition-colors first:border-l-0 hover:bg-surface; }
+  .segmented > button[aria-pressed="true"] { @apply bg-brand text-onbrand hover:bg-brand; }
 
-  .chip { @apply inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs text-ink2 transition-colors hover:border-strong hover:text-ink; }
-  .chip[aria-pressed="true"] { @apply border-brand bg-brand font-medium text-onbrand; }
+  .chip { @apply inline-flex items-center rounded border border-strong bg-card px-2 py-0.5 text-xs text-ink2 transition-colors hover:border-brand hover:text-ink; }
 
   .data-table { @apply w-full text-[13px]; border-collapse: separate; border-spacing: 0; }
-  .data-table thead th { @apply whitespace-nowrap border-b bg-surface px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted; }
-  .data-table tbody td { @apply border-b px-3 py-2.5 align-middle; }
+  .data-table thead th { @apply whitespace-nowrap border-b bg-surface px-2.5 py-2 text-left text-xs font-medium text-muted; }
+  .data-table tbody td { @apply border-b border-[var(--grid)] px-2.5 py-2.5 align-middle; }
   .data-table tbody tr:last-child td { border-bottom: 0; }
   .data-table .num { @apply text-right; }
 
-  .dot-list > li { position: relative; padding-left: 14px; }
-  .dot-list > li::before { content: ""; position: absolute; left: 1px; top: 0.62em; width: 4px; height: 4px; border-radius: 999px; background: var(--accent); }
+  .bullets > li { position: relative; padding-left: 14px; }
+  .bullets > li::before { content: ""; position: absolute; left: 2px; top: 0.6em; width: 4px; height: 4px; background: var(--faint); }
 
   .markdown h3 { font-weight: 600; margin-top: 1.1rem; margin-bottom: 0.3rem; font-size: 0.95rem; color: var(--ink); }
   .markdown h3:first-child { margin-top: 0; }
@@ -213,7 +201,7 @@
   .markdown li::marker { color: var(--faint); }
   .markdown p { margin: 0.4rem 0; }
   .markdown strong { font-weight: 600; color: var(--ink); }
-  .markdown blockquote { border-left: 2px solid var(--accent); padding: 0.1rem 0 0.1rem 0.75rem; color: var(--ink-2); }
+  .markdown blockquote { border: 1px solid var(--border); background: var(--surface-1); border-radius: 4px; padding: 0.4rem 0.7rem; color: var(--ink-2); }
   .markdown sub { color: var(--muted); }
 }
 
@@ -226,13 +214,13 @@
 .recharts-tooltip-wrapper { outline: none; }
 .recharts-surface:focus { outline: none; }
 
-/* Range inputs: thin track, round thumb */
+/* Range inputs: thin track, small round thumb */
 input[type="range"] { -webkit-appearance: none; appearance: none; height: 18px; background: transparent; cursor: pointer; accent-color: var(--brand); }
-input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: 999px; background: var(--grid); }
-input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5px; border-radius: 50%; background: var(--card); border: 2px solid var(--brand); box-shadow: 0 1px 3px rgba(20, 28, 43, 0.25); }
-input[type="range"]::-moz-range-track { height: 4px; border-radius: 999px; background: var(--grid); }
-input[type="range"]::-moz-range-progress { height: 4px; border-radius: 999px; background: var(--brand); }
-input[type="range"]::-moz-range-thumb { width: 11px; height: 11px; border-radius: 50%; background: var(--card); border: 2px solid var(--brand); }
+input[type="range"]::-webkit-slider-runnable-track { height: 3px; border-radius: 2px; background: var(--border-strong); }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; margin-top: -4.5px; border-radius: 50%; background: var(--brand); border: 2px solid var(--card); box-shadow: 0 0 0 1px var(--brand); }
+input[type="range"]::-moz-range-track { height: 3px; border-radius: 2px; background: var(--border-strong); }
+input[type="range"]::-moz-range-progress { height: 3px; border-radius: 2px; background: var(--brand); }
+input[type="range"]::-moz-range-thumb { width: 9px; height: 9px; border-radius: 50%; background: var(--brand); border: 2px solid var(--card); }
 input[type="checkbox"] { accent-color: var(--brand); }
 
 /* Quiet scrollbars */
